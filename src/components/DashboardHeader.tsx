@@ -1,10 +1,9 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function DashboardHeader() {
   const router = useRouter();
-  const pathname = usePathname();
 
   return (
     <header className="bg-white border-b border-gray-200">
