@@ -17,6 +17,41 @@ interface RedditResponse {
   };
 }
 
+async function makeRedditRequest(query: string) {
+  // Construct the Reddit search URL with the encoded query
+  const url = `https://www.reddit.com/search.json?q=${query}&limit=10&sort=relevance&t=all`;
+  console.log("Making Reddit API request to:", url);
+
+  const response = await fetch(url, {
+    headers: {
+      // Use a more specific User-Agent to avoid Reddit API issues
+      "User-Agent": "MenuIQ/1.0 (https://menuiq.com; contact@menuiq.com)",
+      "Accept": "application/json"
+    },
+    // Add cache-control headers
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Reddit API Error: ${response.status} ${response.statusText}`);
+  }
+
+  const json = await response.json() as RedditResponse;
+  
+  if (!json.data?.children) {
+    throw new Error("Invalid response from Reddit API");
+  }
+
+  return json.data.children.map((post) => ({
+    title: post.data.title,
+    subreddit: post.data.subreddit,
+    upvotes: post.data.ups,
+    permalink: `https://reddit.com${post.data.permalink}`,
+    timestamp: post.data.created_utc * 1000,
+    content: post.data.selftext || ""
+  }));
+}
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -26,57 +61,56 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Missing restaurant name" }, { status: 400 });
     }
 
-    // Decode URL encoding from the query string (e.g. %27 -> ')
+    // Decode the restaurant name from the URL
     const restaurantName = decodeURIComponent(encodedRestaurant);
-    console.log("Decoded restaurant name:", restaurantName);
+    console.log("Processing request for restaurant:", restaurantName);
 
-    // Encode for Reddit API query
-    const redditQuery = encodeURIComponent(restaurantName);
-    console.log("Reddit search query:", redditQuery);
+    // Create search queries with and without quotes
+    const queries = [
+      encodeURIComponent(`"${restaurantName}"`), // Exact match
+      encodeURIComponent(restaurantName) // Partial match
+    ];
 
-    const response = await fetch(`https://www.reddit.com/search.json?q=${redditQuery}&limit=10&sort=relevance&t=all`, {
-      headers: {
-        "User-Agent": "MenuIQBot/1.0",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      },
-      next: { revalidate: 60 } // Cache for 60 seconds
-    });
+    // Try each query until we get results
+    let posts = [];
+    let error = null;
 
-    if (!response.ok) {
-      console.error("Reddit API error:", {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-      throw new Error(`Reddit API Error: ${response.status} ${response.statusText}`);
+    for (const query of queries) {
+      try {
+        posts = await makeRedditRequest(query);
+        if (posts.length > 0) {
+          break; // Stop if we found posts
+        }
+      } catch (e) {
+        error = e; // Store the error but continue trying
+        console.error("Error with query:", query, e);
+      }
     }
 
-    const json = await response.json() as RedditResponse;
-    
-    if (!json.data?.children) {
-      console.error("Invalid Reddit API response:", json);
-      throw new Error("Invalid response from Reddit");
+    // If we have posts, return them
+    if (posts.length > 0) {
+      return NextResponse.json({ posts });
     }
 
-    const posts = json.data.children.map((post) => ({
-      title: post.data.title,
-      subreddit: post.data.subreddit,
-      upvotes: post.data.ups,
-      permalink: `https://reddit.com${post.data.permalink}`,
-      timestamp: post.data.created_utc * 1000, // Convert to milliseconds
-      content: post.data.selftext || ""
-    }));
+    // If we got here with no posts but have an error, return the error
+    if (error) {
+      throw error;
+    }
 
-    return NextResponse.json({ posts });
+    // If we got here with no posts and no error, return empty array
+    return NextResponse.json({ posts: [] });
+
   } catch (error) {
-    console.error("Reddit API fetch failed:", {
+    console.error("Reddit API request failed:", {
       error,
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      message: error instanceof Error ? error.message : String(error)
     });
+    
     return NextResponse.json(
-      { error: "Failed to fetch Reddit posts", message: error instanceof Error ? error.message : String(error) },
+      { 
+        error: "Failed to fetch Reddit posts", 
+        message: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
@@ -93,53 +127,52 @@ export async function POST(req: Request) {
       );
     }
 
-    // Encode for Reddit API query
-    const redditQuery = encodeURIComponent(restaurantName);
-    console.log("Reddit search query:", redditQuery);
+    // Create search queries with and without quotes
+    const queries = [
+      encodeURIComponent(`"${restaurantName}"`), // Exact match
+      encodeURIComponent(restaurantName) // Partial match
+    ];
 
-    const response = await fetch(`https://www.reddit.com/search.json?q=${redditQuery}&limit=10&sort=relevance&t=all`, {
-      headers: {
-        "User-Agent": "MenuIQBot/1.0",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      },
-      next: { revalidate: 60 } // Cache for 60 seconds
-    });
+    // Try each query until we get results
+    let posts = [];
+    let error = null;
 
-    if (!response.ok) {
-      console.error("Reddit API error:", {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-      throw new Error(`Reddit API Error: ${response.status} ${response.statusText}`);
+    for (const query of queries) {
+      try {
+        posts = await makeRedditRequest(query);
+        if (posts.length > 0) {
+          break; // Stop if we found posts
+        }
+      } catch (e) {
+        error = e; // Store the error but continue trying
+        console.error("Error with query:", query, e);
+      }
     }
 
-    const json = await response.json() as RedditResponse;
-    
-    if (!json.data?.children) {
-      console.error("Invalid Reddit API response:", json);
-      throw new Error("Invalid response from Reddit");
+    // If we have posts, return them
+    if (posts.length > 0) {
+      return NextResponse.json({ posts });
     }
 
-    const posts = json.data.children.map((post) => ({
-      title: post.data.title,
-      subreddit: post.data.subreddit,
-      upvotes: post.data.ups,
-      permalink: `https://reddit.com${post.data.permalink}`,
-      timestamp: post.data.created_utc * 1000, // Convert to milliseconds
-      content: post.data.selftext || ""
-    }));
+    // If we got here with no posts but have an error, return the error
+    if (error) {
+      throw error;
+    }
 
-    return NextResponse.json({ posts });
+    // If we got here with no posts and no error, return empty array
+    return NextResponse.json({ posts: [] });
+
   } catch (error) {
-    console.error("Reddit API fetch failed:", {
+    console.error("Reddit API request failed:", {
       error,
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      message: error instanceof Error ? error.message : String(error)
     });
+    
     return NextResponse.json(
-      { error: "Failed to fetch Reddit posts", message: error instanceof Error ? error.message : String(error) },
+      { 
+        error: "Failed to fetch Reddit posts", 
+        message: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
