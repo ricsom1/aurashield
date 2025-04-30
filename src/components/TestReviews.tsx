@@ -66,7 +66,7 @@ export default function TestReviews({ sentimentFilter = 'all' }: TestReviewsProp
       setError(null);
 
       console.log("TestReviews - Fetching reviews for place_id:", selectedPlace.place_id);
-      const data = await fetchWithRetry("/api/reviews", {
+      const data = await fetchWithRetry<Review>("/api/reviews", {
         method: "POST",
         body: JSON.stringify({
           placeId: selectedPlace.place_id,

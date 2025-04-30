@@ -1,9 +1,17 @@
-export async function fetchWithRetry(
+interface ApiResponse<T> {
+  error?: string;
+  details?: string;
+  status?: number;
+  data?: T;
+  insertedData?: T[];
+}
+
+export async function fetchWithRetry<T>(
   url: string,
   options: RequestInit,
   retries = 3,
   backoff = 300
-): Promise<any> {
+): Promise<ApiResponse<T>> {
   try {
     const response = await fetch(url, {
       ...options,
