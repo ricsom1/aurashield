@@ -49,12 +49,14 @@ async function getRedditAccessToken(): Promise<string> {
   const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   console.log("🔐 Basic Auth header constructed");
 
-  const userAgent = 'MenuIQ/1.0 by Ok_Willingness_2450';
+  // Reddit requires a specific User-Agent format
+  const userAgent = 'script:menuiq:v1.0 (by /u/Ok_Willingness_2450)';
 
-  // Prepare request body for client credentials flow
+  // Prepare request body for password grant type
   const formData = new URLSearchParams();
-  formData.append('grant_type', 'client_credentials');
-  // Note: We don't need username/password for client credentials flow
+  formData.append('grant_type', 'password');
+  formData.append('username', username.trim());
+  formData.append('password', password.trim());
 
   console.log("🔐 Making token request to Reddit...");
   console.log("🔐 Request details:", {
@@ -66,7 +68,9 @@ async function getRedditAccessToken(): Promise<string> {
       'User-Agent': userAgent
     },
     body: {
-      grant_type: 'client_credentials'
+      grant_type: 'password',
+      username: '[REDACTED]',
+      password: '[REDACTED]'
     }
   });
 
@@ -120,11 +124,13 @@ async function fetchRedditPosts(restaurantName: string) {
     const redditUrl = `https://oauth.reddit.com/search?q=${query}&limit=10&sort=new&type=link`;
     console.log("🔍 Searching Reddit with URL:", redditUrl);
 
+    const userAgent = 'script:menuiq:v1.0 (by /u/Ok_Willingness_2450)';
+
     // Make the request with OAuth token
     const redditRes = await fetch(redditUrl, {
       headers: {
         'Authorization': `Bearer ${token}`,
-        'User-Agent': 'MenuIQApp/0.1 by Ok_Willingness_2450',
+        'User-Agent': userAgent,
         'Accept': 'application/json'
       }
     });
