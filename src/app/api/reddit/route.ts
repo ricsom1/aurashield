@@ -14,13 +14,16 @@ interface RedditPost {
 async function searchReddit(restaurantName: string) {
   // URL encode the restaurant name for the search query
   const query = encodeURIComponent(`"${restaurantName}"`);
-  const url = `https://www.reddit.com/search.json?q=${query}&limit=10&sort=relevance`;
+  const url = `https://www.reddit.com/search.json?q=${query}&limit=10&sort=relevance&t=all`;
 
   console.log("Fetching Reddit data for:", restaurantName);
   const response = await fetch(url, {
     headers: {
-      "User-Agent": "MenuIQ/1.0.0"
-    }
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    next: { revalidate: 60 } // Cache for 60 seconds
   });
 
   if (!response.ok) {
@@ -29,6 +32,11 @@ async function searchReddit(restaurantName: string) {
   }
 
   const data = await response.json();
+  
+  if (!data.data?.children) {
+    console.error("Invalid Reddit API response:", data);
+    throw new Error("Invalid response from Reddit");
+  }
   
   // Transform the Reddit response into our desired format
   return data.data.children.map((post: RedditPost) => ({
@@ -42,18 +50,20 @@ async function searchReddit(restaurantName: string) {
 }
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const restaurantName = searchParams.get('restaurantName');
-
-  if (!restaurantName) {
-    return NextResponse.json(
-      { error: "Restaurant name is required" },
-      { status: 400 }
-    );
-  }
-
   try {
+    const { searchParams } = new URL(req.url);
+    const restaurantName = searchParams.get('restaurantName');
+
+    if (!restaurantName) {
+      return NextResponse.json(
+        { error: "Restaurant name is required" },
+        { status: 400 }
+      );
+    }
+
     const posts = await searchReddit(restaurantName);
+    
+    // If we got no posts, still return a 200 with empty array
     return NextResponse.json({ posts });
   } catch (err) {
     console.error("Reddit search error:", err);
