@@ -24,6 +24,15 @@ async function getRedditAccessToken(): Promise<string> {
   const username = process.env.REDDIT_USERNAME;
   const password = process.env.REDDIT_PASSWORD;
 
+  // More detailed logging for debugging
+  console.log("🔐 Environment variables check:", {
+    REDDIT_CLIENT_ID_length: clientId?.length || 0,
+    REDDIT_CLIENT_SECRET_length: clientSecret?.length || 0,
+    REDDIT_USERNAME_length: username?.length || 0,
+    REDDIT_PASSWORD_length: password?.length || 0,
+    NODE_ENV: process.env.NODE_ENV
+  });
+
   // Log credential presence (without values)
   console.log("🔐 Checking Reddit credentials:", {
     clientId: clientId ? "✅ present" : "❌ missing",
@@ -40,12 +49,13 @@ async function getRedditAccessToken(): Promise<string> {
   const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   console.log("🔐 Basic Auth header constructed");
 
+  const userAgent = 'MenuIQ/1.0 by Ok_Willingness_2450';
+
   // Prepare request body
-  const body = new URLSearchParams({
-    grant_type: 'password',
-    username: username.trim(),
-    password: password.trim(),
-  });
+  const formData = new URLSearchParams();
+  formData.append('grant_type', 'password');
+  formData.append('username', username.trim());
+  formData.append('password', password.trim());
 
   console.log("🔐 Making token request to Reddit...");
   console.log("🔐 Request details:", {
@@ -54,7 +64,7 @@ async function getRedditAccessToken(): Promise<string> {
     headers: {
       'Authorization': 'Basic [REDACTED]',
       'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'menuIQ/1.0 by Ok_Willingness_2450'
+      'User-Agent': userAgent
     },
     body: {
       grant_type: 'password',
@@ -69,9 +79,9 @@ async function getRedditAccessToken(): Promise<string> {
       headers: {
         'Authorization': `Basic ${basicAuth}`,
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'menuIQ/1.0 by Ok_Willingness_2450'
+        'User-Agent': userAgent
       },
-      body: body.toString(),
+      body: formData,
     });
 
     console.log("🔐 Token response status:", tokenRes.status);
