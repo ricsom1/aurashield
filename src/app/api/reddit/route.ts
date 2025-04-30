@@ -47,7 +47,16 @@ async function getRedditAccessToken(): Promise<string> {
 
   // Construct Basic Auth header
   const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  console.log("🔐 Basic Auth header constructed");
+  
+  // Verify Basic Auth construction
+  console.log("🔐 Basic Auth verification:", {
+    expectedClientId: clientId,
+    expectedClientSecret: clientSecret?.slice(0, 4) + '...',  // Only log first 4 chars for security
+    base64Length: basicAuth.length,
+    authHeaderFormat: `Basic ${basicAuth.slice(0, 4)}...`,  // Only log first 4 chars for security
+    containsColonInOriginal: `${clientId}:${clientSecret}`.includes(':'),
+    base64Pattern: /^[A-Za-z0-9+/]+=*$/.test(basicAuth)
+  });
 
   // Reddit requires a specific User-Agent format
   const userAgent = 'script:menuiq:v1.0 (by /u/Ok_Willingness_2450)';
@@ -57,6 +66,16 @@ async function getRedditAccessToken(): Promise<string> {
   formData.append('grant_type', 'password');
   formData.append('username', username.trim());
   formData.append('password', password.trim());
+
+  // Verify request body format
+  console.log("🔐 Request body verification:", {
+    formDataString: formData.toString(),
+    hasGrantType: formData.has('grant_type'),
+    hasUsername: formData.has('username'),
+    hasPassword: formData.has('password'),
+    grantTypeValue: formData.get('grant_type'),
+    contentType: 'application/x-www-form-urlencoded'
+  });
 
   console.log("🔐 Making token request to Reddit...");
   console.log("🔐 Request details:", {
@@ -75,6 +94,14 @@ async function getRedditAccessToken(): Promise<string> {
   });
 
   try {
+    // Test the Basic Auth string separately
+    const testAuthHeader = `Basic ${basicAuth}`;
+    console.log("🔐 Testing Basic Auth header:", {
+      startsWithBasic: testAuthHeader.startsWith('Basic '),
+      hasOneSpace: (testAuthHeader.match(/ /g) || []).length === 1,
+      headerLength: testAuthHeader.length
+    });
+
     const tokenRes = await fetch('https://ssl.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: {
@@ -85,15 +112,27 @@ async function getRedditAccessToken(): Promise<string> {
       body: formData,
     });
 
-    console.log("🔐 Token response status:", tokenRes.status);
-    console.log("🔐 Token response headers:", Object.fromEntries(tokenRes.headers.entries()));
+    // Log complete response details
+    console.log("🔐 Token response details:", {
+      status: tokenRes.status,
+      statusText: tokenRes.statusText,
+      headers: Object.fromEntries(tokenRes.headers.entries()),
+      url: tokenRes.url,
+    });
 
     if (!tokenRes.ok) {
       const error = await tokenRes.text();
+      let parsedError;
+      try {
+        parsedError = JSON.parse(error);
+      } catch (e) {
+        parsedError = error;
+      }
+
       const errorDetails = {
         status: tokenRes.status,
         statusText: tokenRes.statusText,
-        error,
+        error: parsedError,
         headers: Object.fromEntries(tokenRes.headers.entries()),
         requestUrl: 'https://ssl.reddit.com/api/v1/access_token',
         requestHeaders: {
@@ -101,11 +140,8 @@ async function getRedditAccessToken(): Promise<string> {
           'Content-Type': 'application/x-www-form-urlencoded',
           'User-Agent': userAgent
         },
-        requestBody: {
-          grant_type: 'password',
-          username: '[REDACTED]',
-          password: '[REDACTED]'
-        }
+        requestBody: formData.toString(),
+        authHeaderFormat: testAuthHeader.replace(basicAuth, '[REDACTED]')
       };
       console.error("❌ Reddit token error:", errorDetails);
       throw new Error(`Failed to get Reddit access token: ${tokenRes.status} ${error}`);
