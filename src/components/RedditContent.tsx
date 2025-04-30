@@ -41,11 +41,7 @@ export default function RedditContent() {
       setError(null);
       setSummary("");
 
-      const response = await fetch("/api/reddit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ restaurantName })
-      });
+      const response = await fetch(`/api/reddit?restaurantName=${encodeURIComponent(restaurantName)}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch Reddit posts: ${response.status}`);
