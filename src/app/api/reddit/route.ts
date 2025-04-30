@@ -21,17 +21,23 @@ interface RedditResponse {
 async function getRedditAccessToken(): Promise<string> {
   const clientId = process.env.REDDIT_CLIENT_ID;
   const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  const username = process.env.REDDIT_USERNAME;
+  const password = process.env.REDDIT_PASSWORD;
   
   // Log environment variable presence
   console.log("🔐 Checking Reddit credentials:", {
     clientId: clientId ? "✅ present" : "❌ missing",
     clientSecret: clientSecret ? "✅ present" : "❌ missing",
+    username: username ? "✅ present" : "❌ missing",
+    password: password ? "✅ present" : "❌ missing",
     clientIdLength: clientId?.length || 0,
-    clientSecretLength: clientSecret?.length || 0
+    clientSecretLength: clientSecret?.length || 0,
+    usernameLength: username?.length || 0,
+    passwordLength: password?.length || 0
   });
 
-  if (!clientId || !clientSecret) {
-    throw new Error("Missing Reddit client credentials");
+  if (!clientId || !clientSecret || !username || !password) {
+    throw new Error("Missing Reddit credentials");
   }
 
   // Construct Basic Auth header
@@ -48,14 +54,16 @@ async function getRedditAccessToken(): Promise<string> {
   // Reddit requires a specific User-Agent format
   const userAgent = 'script:menuiq:v1.0 (by /u/Ok_Willingness_2450)';
 
-  // Prepare request body for client credentials grant type
+  // Prepare request body for password grant type
   const formData = new URLSearchParams();
-  formData.append('grant_type', 'client_credentials');
+  formData.append('grant_type', 'password');
+  formData.append('username', username);
+  formData.append('password', password);
 
   console.log("🔐 Making token request to Reddit...");
 
   try {
-    const tokenRes = await fetch('https://ssl.reddit.com/api/v1/access_token', {
+    const tokenRes = await fetch('https://www.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: {
         'Authorization': authorizationHeader,
@@ -76,8 +84,8 @@ async function getRedditAccessToken(): Promise<string> {
       console.error("❌ Token error details:", {
         status: tokenRes.status,
         error: error,
-        requestUrl: 'https://ssl.reddit.com/api/v1/access_token',
-        requestBody: formData.toString()
+        requestUrl: 'https://www.reddit.com/api/v1/access_token',
+        requestBody: 'grant_type=password&username=[REDACTED]&password=[REDACTED]'
       });
       throw new Error(`Failed to get Reddit access token: ${tokenRes.status} ${error}`);
     }
