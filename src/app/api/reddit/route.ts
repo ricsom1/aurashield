@@ -57,8 +57,8 @@ async function fetchRedditPosts(restaurantName: string) {
       throw new Error(`Reddit API returned ${response.status}: ${response.statusText}`);
     }
 
-    // Parse response
-    const data = await response.json();
+    // Parse response with proper type casting
+    const data = await response.json() as RedditResponse;
     
     // Validate response structure
     if (!data || !data.data || !Array.isArray(data.data.children)) {
