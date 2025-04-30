@@ -11,6 +11,12 @@ interface RedditPost {
   };
 }
 
+interface RedditResponse {
+  data: {
+    children: RedditPost[];
+  };
+}
+
 async function searchReddit(restaurantName: string) {
   // URL encode the restaurant name for the search query
   const query = encodeURIComponent(`"${restaurantName}"`);
@@ -91,14 +97,14 @@ export async function GET(req: Request) {
       throw new Error(`Reddit API Error: ${response.status} ${response.statusText}`);
     }
 
-    const json = await response.json();
+    const json = await response.json() as RedditResponse;
     
     if (!json.data?.children) {
       console.error("Invalid Reddit API response:", json);
       throw new Error("Invalid response from Reddit");
     }
 
-    const posts = json.data.children.map((post: any) => ({
+    const posts = json.data.children.map((post) => ({
       title: post.data.title,
       subreddit: post.data.subreddit,
       upvotes: post.data.ups,
@@ -108,14 +114,14 @@ export async function GET(req: Request) {
     }));
 
     return NextResponse.json({ posts });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Reddit API fetch failed:", {
       error,
-      message: error.message || String(error),
-      stack: error.stack
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     });
     return NextResponse.json(
-      { error: "Failed to fetch Reddit posts", message: error.message || String(error) },
+      { error: "Failed to fetch Reddit posts", message: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
@@ -154,14 +160,14 @@ export async function POST(req: Request) {
       throw new Error(`Reddit API Error: ${response.status} ${response.statusText}`);
     }
 
-    const json = await response.json();
+    const json = await response.json() as RedditResponse;
     
     if (!json.data?.children) {
       console.error("Invalid Reddit API response:", json);
       throw new Error("Invalid response from Reddit");
     }
 
-    const posts = json.data.children.map((post: any) => ({
+    const posts = json.data.children.map((post) => ({
       title: post.data.title,
       subreddit: post.data.subreddit,
       upvotes: post.data.ups,
@@ -171,14 +177,14 @@ export async function POST(req: Request) {
     }));
 
     return NextResponse.json({ posts });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Reddit API fetch failed:", {
       error,
-      message: error.message || String(error),
-      stack: error.stack
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     });
     return NextResponse.json(
-      { error: "Failed to fetch Reddit posts", message: error.message || String(error) },
+      { error: "Failed to fetch Reddit posts", message: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
