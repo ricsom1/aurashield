@@ -1,11 +1,18 @@
-interface ApiResponse<T> {
+export interface ApiResponse<T> {
+  data?: T;
   error?: string;
-  details?: string;
   status?: number;
-  place?: T;
-  insertedData?: T[];
   ok: boolean;
   statusText: string;
+}
+
+export interface SearchResponse {
+  place?: {
+    place_id: string;
+    name: string;
+    formatted_address?: string;
+  };
+  error?: string;
 }
 
 export async function fetchWithRetry<T>(
@@ -34,7 +41,9 @@ export async function fetchWithRetry<T>(
     }
 
     return {
-      ...data,
+      data,
+      error: data.error,
+      status: response.status,
       ok: response.ok,
       statusText: response.statusText
     };

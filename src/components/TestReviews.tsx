@@ -66,22 +66,22 @@ export default function TestReviews({ sentimentFilter = 'all' }: TestReviewsProp
       setError(null);
 
       console.log("TestReviews - Fetching reviews for place_id:", selectedPlace.place_id);
-      const data = await fetchWithRetry<Review>("/api/reviews", {
+      const response = await fetchWithRetry<{ inserted: number; insertedData: Review[] }>("/api/reviews", {
         method: "POST",
         body: JSON.stringify({
           placeId: selectedPlace.place_id,
         }),
       });
 
-      console.log("TestReviews - API response:", data);
+      console.log("TestReviews - API response:", response);
 
-      if (data.insertedData && Array.isArray(data.insertedData)) {
-        console.log("TestReviews - Setting reviews:", data.insertedData.length);
-        setReviews(data.insertedData);
+      if (response.data?.insertedData && Array.isArray(response.data.insertedData)) {
+        console.log("TestReviews - Setting reviews:", response.data.insertedData.length);
+        setReviews(response.data.insertedData);
       } else {
-        console.error("TestReviews - Invalid response format:", data);
+        console.error("TestReviews - Invalid response format:", response);
         setError({ 
-          error: "Invalid response format", 
+          error: response.error || "Invalid response format", 
           details: "The server returned an unexpected response format" 
         });
       }

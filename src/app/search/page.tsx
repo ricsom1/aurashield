@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchWithRetry } from "@/lib/api";
+import { fetchWithRetry, SearchResponse } from "@/lib/api";
 
 interface Place {
   place_id: string;
@@ -26,27 +26,31 @@ export default function SearchPage() {
       setError(null);
       setPlace(null);
 
-      const response = await fetchWithRetry("/api/places/search", {
+      const response = await fetchWithRetry<SearchResponse>("/api/places/search", {
         method: "POST",
         body: JSON.stringify({ query }),
       });
 
-      const data = await response.json();
-      console.log("Search response:", data);
+      console.log("Search response:", response);
 
-      if (data.place) {
+      if (response.data?.place) {
         console.log("Setting place with structure:", {
-          place_id: data.place.place_id,
-          name: data.place.name,
-          formatted_address: data.place.formatted_address,
+          place_id: response.data.place.place_id,
+          name: response.data.place.name,
+          formatted_address: response.data.place.formatted_address,
         });
-        setPlace(data.place);
+        setPlace(response.data.place);
       } else {
-        setError("No places found");
+        setError(response.error || "No places found");
       }
     } catch (err) {
       console.error("Search error:", err);
-      setError("Failed to search places");
+      try {
+        const errorData = JSON.parse(err instanceof Error ? err.message : String(err));
+        setError(errorData.error || "Failed to search places");
+      } catch {
+        setError("Failed to search places");
+      }
     } finally {
       setIsLoading(false);
     }
