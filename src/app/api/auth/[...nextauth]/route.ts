@@ -10,7 +10,7 @@ const handler = NextAuth({
     }),
   ],
   adapter: SupabaseAdapter({
-    url: process.env.SUPABASE_URL!,
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
     secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
   }),
 });
