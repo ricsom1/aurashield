@@ -19,15 +19,6 @@ interface GooglePlacesResponse {
   error_message?: string;
 }
 
-interface ApiResponse {
-  place?: {
-    place_id: string;
-    name: string;
-    formatted_address?: string;
-  };
-  error?: string;
-}
-
 function httpsGet(url: string): Promise<GooglePlacesResponse> {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
