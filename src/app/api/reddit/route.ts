@@ -43,11 +43,25 @@ async function getRedditAccessToken(): Promise<string> {
   // Prepare request body
   const body = new URLSearchParams({
     grant_type: 'password',
-    username: username,
-    password: password,
+    username: username.trim(),
+    password: password.trim(),
   });
 
   console.log("🔐 Making token request to Reddit...");
+  console.log("🔐 Request details:", {
+    url: 'https://www.reddit.com/api/v1/access_token',
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic [REDACTED]',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'menuIQ/1.0 by Ok_Willingness_2450'
+    },
+    body: {
+      grant_type: 'password',
+      username: username.trim(),
+      password: '[REDACTED]'
+    }
+  });
 
   try {
     const tokenRes = await fetch('https://www.reddit.com/api/v1/access_token', {
@@ -61,6 +75,7 @@ async function getRedditAccessToken(): Promise<string> {
     });
 
     console.log("🔐 Token response status:", tokenRes.status);
+    console.log("🔐 Token response headers:", Object.fromEntries(tokenRes.headers.entries()));
 
     if (!tokenRes.ok) {
       const error = await tokenRes.text();
