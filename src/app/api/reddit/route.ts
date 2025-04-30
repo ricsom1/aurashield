@@ -17,51 +17,6 @@ interface RedditResponse {
   };
 }
 
-async function searchReddit(restaurantName: string) {
-  // URL encode the restaurant name for the search query
-  const query = encodeURIComponent(`"${restaurantName}"`);
-  const url = `https://www.reddit.com/search.json?q=${query}&limit=10&sort=relevance&t=all`;
-
-  console.log("Fetching Reddit data for:", restaurantName);
-  console.log("Search query:", query);
-  console.log("Reddit API URL:", url);
-
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-      "Accept": "application/json",
-      "Content-Type": "application/json"
-    },
-    next: { revalidate: 60 } // Cache for 60 seconds
-  });
-
-  if (!response.ok) {
-    console.error("Reddit API error:", {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
-    });
-    throw new Error(`Failed to fetch from Reddit: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  
-  if (!data.data?.children) {
-    console.error("Invalid Reddit API response:", data);
-    throw new Error("Invalid response from Reddit");
-  }
-  
-  // Transform the Reddit response into our desired format
-  return data.data.children.map((post: RedditPost) => ({
-    title: post.data.title,
-    subreddit: post.data.subreddit,
-    upvotes: post.data.ups,
-    permalink: `https://reddit.com${post.data.permalink}`,
-    timestamp: post.data.created_utc * 1000, // Convert to milliseconds
-    content: post.data.selftext || ""
-  }));
-}
-
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
