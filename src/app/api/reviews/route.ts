@@ -145,10 +145,14 @@ export async function POST(req: Request) {
           }, { status: 409 });
         }
         
-        if (supabaseError.code === '42501') {
+        if (supabaseError.code === '42501' || supabaseError.message.includes('permission denied')) {
+          console.error("Permission denied error. Service role key:", {
+            hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            keyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0
+          });
           return NextResponse.json({ 
             error: "Permission denied",
-            details: "The service role key might not have the required permissions",
+            details: "Please check that RLS policies are configured correctly and the service role key has proper permissions",
             code: supabaseError.code
           }, { status: 403 });
         }

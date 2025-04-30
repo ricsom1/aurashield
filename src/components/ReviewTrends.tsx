@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getCachedReviews, getCachedKeywords } from "@/lib/cache";
+import { startMetric, endMetric } from "@/lib/performance";
 
 interface Keyword {
   word: string;
@@ -17,6 +18,13 @@ interface Review {
   text: string;
   sentiment: string;
   created_at: string;
+  place_id: string;
+}
+
+interface CachedKeyword {
+  word: string;
+  count: number;
+  sentiment: "positive" | "negative" | "neutral";
 }
 
 export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
@@ -31,18 +39,13 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
         setIsLoading(true);
         setError(null);
 
-        const supabase = getSupabaseClient();
-        const { data: reviews, error: fetchError } = await supabase
-          .from("reviews")
-          .select("text, sentiment, created_at")
-          .eq("place_id", placeId)
-          .order("created_at", { ascending: true });
+        startMetric('fetchReviews');
+        const reviews = await getCachedReviews(placeId);
+        endMetric('fetchReviews');
 
-        if (fetchError) {
-          console.error("Supabase fetch error:", fetchError);
-          setError(fetchError.message);
-          return;
-        }
+        startMetric('fetchKeywords');
+        const cachedKeywords = await getCachedKeywords(placeId);
+        endMetric('fetchKeywords');
 
         if (!reviews || reviews.length === 0) {
           setSummary("Not enough data for insights yet.");
@@ -50,55 +53,63 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
           return;
         }
 
-        // Extract keywords and their sentiment
-        const keywordMap = new Map<string, { count: number; sentiment: string }>();
-        
-        (reviews as Review[]).forEach(review => {
-          // Simple keyword extraction - split by spaces and remove common words
-          const words = review.text.toLowerCase()
-            .split(/\s+/)
-            .filter(word => word.length > 3 && !["the", "and", "was", "were", "that", "this", "with", "have", "from", "they"].includes(word));
+        if (cachedKeywords && cachedKeywords.length > 0) {
+          setKeywords(cachedKeywords);
+        } else {
+          startMetric('processKeywords');
+          // Extract keywords and their sentiment
+          const keywordMap = new Map<string, { count: number; sentiment: string }>();
+          
+          reviews.forEach(review => {
+            // Simple keyword extraction - split by spaces and remove common words
+            const words = review.text.toLowerCase()
+              .split(/\s+/)
+              .filter(word => word.length > 3 && !["the", "and", "was", "were", "that", "this", "with", "have", "from", "they"].includes(word));
 
-          words.forEach(word => {
-            const existing = keywordMap.get(word);
-            if (existing) {
-              keywordMap.set(word, {
-                count: existing.count + 1,
-                sentiment: review.sentiment
-              });
-            } else {
-              keywordMap.set(word, {
-                count: 1,
-                sentiment: review.sentiment
-              });
-            }
+            words.forEach(word => {
+              const existing = keywordMap.get(word);
+              if (existing) {
+                keywordMap.set(word, {
+                  count: existing.count + 1,
+                  sentiment: review.sentiment
+                });
+              } else {
+                keywordMap.set(word, {
+                  count: 1,
+                  sentiment: review.sentiment
+                });
+              }
+            });
           });
-        });
 
-        // Convert to array and sort by count
-        const keywordArray: Keyword[] = Array.from(keywordMap.entries())
-          .map(([word, data]) => ({
-            word,
-            count: data.count,
-            sentiment: data.sentiment as "positive" | "negative" | "neutral"
-          }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 5);
+          // Convert to array and sort by count
+          const keywordArray: Keyword[] = Array.from(keywordMap.entries())
+            .map(([word, data]) => ({
+              word,
+              count: data.count,
+              sentiment: data.sentiment as "positive" | "negative" | "neutral"
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
 
-        setKeywords(keywordArray);
+          setKeywords(keywordArray);
+          endMetric('processKeywords');
+        }
 
         // Generate summary using GPT
         try {
+          startMetric('generateSummary');
           const response = await fetch("/api/gpt/summary", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ keywords: keywordArray })
+            body: JSON.stringify({ keywords })
           });
 
           if (!response.ok) throw new Error("Failed to generate summary");
 
           const data = await response.json();
           setSummary(data.summary);
+          endMetric('generateSummary');
         } catch (err) {
           console.error("GPT summary error:", err);
           setSummary("Not enough data for insights yet.");
