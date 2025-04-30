@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "your-service-role-key",
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "your-google-client-id",
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "your-google-client-secret",
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || "your-openai-api-key",
   },
 };
 
