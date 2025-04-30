@@ -29,10 +29,12 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
         startMetric('fetchReviews');
         const reviews = await getCachedReviews(placeId);
         endMetric('fetchReviews');
+        console.log("Fetched reviews:", reviews.length);
 
         startMetric('fetchKeywords');
         const cachedKeywords = await getCachedKeywords(placeId);
         endMetric('fetchKeywords');
+        console.log("Fetched keywords:", cachedKeywords.length);
 
         if (!reviews || reviews.length === 0) {
           setSummary("Not enough data for insights yet.");
@@ -45,6 +47,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
         if (cachedKeywords && cachedKeywords.length > 0) {
           currentKeywords = cachedKeywords;
           setKeywords(currentKeywords);
+          console.log("Using cached keywords:", currentKeywords);
         } else {
           startMetric('processKeywords');
           // Extract keywords and their sentiment
@@ -83,21 +86,32 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
             .slice(0, 5);
 
           setKeywords(currentKeywords);
+          console.log("Generated new keywords:", currentKeywords);
           endMetric('processKeywords');
         }
 
         // Generate summary using GPT
         try {
           startMetric('generateSummary');
+          console.log("Sending keywords to GPT:", currentKeywords);
           const response = await fetch("/api/gpt/summary", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ keywords: currentKeywords })
           });
 
-          if (!response.ok) throw new Error("Failed to generate summary");
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error("GPT API error:", {
+              status: response.status,
+              statusText: response.statusText,
+              data: errorData
+            });
+            throw new Error(`Failed to generate summary: ${response.status} ${response.statusText}`);
+          }
 
           const data = await response.json();
+          console.log("Received GPT summary:", data);
           setSummary(data.summary);
           endMetric('generateSummary');
         } catch (err) {
