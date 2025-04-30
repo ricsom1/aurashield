@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { classifySentiment } from "@/lib/gptSentiment";
 import https from 'https';
 
@@ -113,6 +113,7 @@ export async function POST(req: Request) {
 
       // Insert the reviews and only select the fields we need
       console.log("Attempting to insert reviews into Supabase...");
+      const supabaseAdmin = getSupabaseAdmin();
       const { data: insertedData, error: supabaseError } = await supabaseAdmin
         .from("reviews")
         .insert(rows)

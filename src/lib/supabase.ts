@@ -1,32 +1,41 @@
 import { createClient } from '@supabase/supabase-js';
 
+let supabase: ReturnType<typeof createClient>;
+let supabaseAdmin: ReturnType<typeof createClient>;
+
 // For client-side operations (pages, components)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+export function getSupabaseClient() {
+  if (supabase) return supabase;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase client credentials:', {
-    url: !!supabaseUrl,
-    anonKey: !!supabaseAnonKey
-  });
-  throw new Error('Missing Supabase client credentials');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase client credentials');
+    throw new Error('Missing Supabase client credentials');
+  }
+
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
+  return supabase;
 }
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // For server-side operations (API routes)
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!serviceRoleKey || !supabaseUrl) {
-  throw new Error('Missing Supabase env vars (SUPABASE_SERVICE_ROLE_KEY or URL)');
-}
+export function getSupabaseAdmin() {
+  if (supabaseAdmin) return supabaseAdmin;
 
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  serviceRoleKey,
-  {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!serviceRoleKey || !supabaseUrl) {
+    console.error('Missing Supabase admin credentials');
+    throw new Error('Missing Supabase env vars (SUPABASE_SERVICE_ROLE_KEY or URL)');
+  }
+
+  supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
     }
-  }
-); 
+  });
+  return supabaseAdmin;
+} 

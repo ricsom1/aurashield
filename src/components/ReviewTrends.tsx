@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { Bar } from "react-chartjs-2";
+import { getSupabaseClient } from "@/lib/supabase";
 
 interface Keyword {
   word: string;
@@ -20,24 +21,22 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function analyzeReviews() {
+    async function fetchReviews() {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Get reviews from the last 7 days
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
+        const supabase = getSupabaseClient();
         const { data: reviews, error: fetchError } = await supabase
           .from("reviews")
-          .select("text, sentiment")
+          .select("sentiment, created_at")
           .eq("place_id", placeId)
-          .gte("time_created", oneWeekAgo.toISOString());
+          .order("created_at", { ascending: true });
 
         if (fetchError) {
           console.error("Supabase fetch error:", fetchError);
-          throw new Error("Failed to fetch reviews");
+          setError(fetchError.message);
+          return;
         }
 
         if (!reviews || reviews.length === 0) {
@@ -110,7 +109,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
     }
 
     if (placeId) {
-      analyzeReviews();
+      fetchReviews();
     }
   }, [placeId]);
 
