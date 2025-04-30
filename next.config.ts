@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "your-google-client-id",
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "your-google-client-secret",
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || "your-openai-api-key",
+    GOOGLE_PLACES_API_KEY: process.env.GOOGLE_PLACES_API_KEY || "your-google-places-api-key",
   },
 };
 
