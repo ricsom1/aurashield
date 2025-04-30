@@ -21,28 +21,23 @@ interface RedditResponse {
 async function getRedditAccessToken(): Promise<string> {
   const clientId = process.env.REDDIT_CLIENT_ID;
   const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  const username = process.env.REDDIT_USERNAME;
-  const password = process.env.REDDIT_PASSWORD;
-
+  // We don't need username and password for client_credentials grant type
+  
   // More detailed logging for debugging
   console.log("🔐 Environment variables check:", {
     REDDIT_CLIENT_ID_length: clientId?.length || 0,
     REDDIT_CLIENT_SECRET_length: clientSecret?.length || 0,
-    REDDIT_USERNAME_length: username?.length || 0,
-    REDDIT_PASSWORD_length: password?.length || 0,
     NODE_ENV: process.env.NODE_ENV
   });
 
   // Log credential presence (without values)
   console.log("🔐 Checking Reddit credentials:", {
     clientId: clientId ? "✅ present" : "❌ missing",
-    clientSecret: clientSecret ? "✅ present" : "❌ missing",
-    username: username ? "✅ present" : "❌ missing",
-    password: password ? "✅ present" : "❌ missing"
+    clientSecret: clientSecret ? "✅ present" : "❌ missing"
   });
 
-  if (!clientId || !clientSecret || !username || !password) {
-    throw new Error("Missing Reddit credentials");
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing Reddit client credentials");
   }
 
   // Construct Basic Auth header
@@ -61,18 +56,14 @@ async function getRedditAccessToken(): Promise<string> {
   // Reddit requires a specific User-Agent format
   const userAgent = 'script:menuiq:v1.0 (by /u/Ok_Willingness_2450)';
 
-  // Prepare request body for password grant type
+  // Prepare request body for client credentials grant type
   const formData = new URLSearchParams();
-  formData.append('grant_type', 'password');
-  formData.append('username', username.trim());
-  formData.append('password', password.trim());
+  formData.append('grant_type', 'client_credentials');
 
   // Verify request body format
   console.log("🔐 Request body verification:", {
     formDataString: formData.toString(),
     hasGrantType: formData.has('grant_type'),
-    hasUsername: formData.has('username'),
-    hasPassword: formData.has('password'),
     grantTypeValue: formData.get('grant_type'),
     contentType: 'application/x-www-form-urlencoded'
   });
@@ -87,9 +78,7 @@ async function getRedditAccessToken(): Promise<string> {
       'User-Agent': userAgent
     },
     body: {
-      grant_type: 'password',
-      username: '[REDACTED]',
-      password: '[REDACTED]'
+      grant_type: 'client_credentials'
     }
   });
 
