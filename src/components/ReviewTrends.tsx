@@ -14,19 +14,6 @@ interface ReviewTrendsProps {
   placeId: string;
 }
 
-interface Review {
-  text: string;
-  sentiment: string;
-  created_at: string;
-  place_id: string;
-}
-
-interface CachedKeyword {
-  word: string;
-  count: number;
-  sentiment: "positive" | "negative" | "neutral";
-}
-
 export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [summary, setSummary] = useState<string>("");
@@ -53,8 +40,11 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
           return;
         }
 
+        let currentKeywords: Keyword[] = [];
+
         if (cachedKeywords && cachedKeywords.length > 0) {
-          setKeywords(cachedKeywords);
+          currentKeywords = cachedKeywords;
+          setKeywords(currentKeywords);
         } else {
           startMetric('processKeywords');
           // Extract keywords and their sentiment
@@ -83,7 +73,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
           });
 
           // Convert to array and sort by count
-          const keywordArray: Keyword[] = Array.from(keywordMap.entries())
+          currentKeywords = Array.from(keywordMap.entries())
             .map(([word, data]) => ({
               word,
               count: data.count,
@@ -92,7 +82,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
             .sort((a, b) => b.count - a.count)
             .slice(0, 5);
 
-          setKeywords(keywordArray);
+          setKeywords(currentKeywords);
           endMetric('processKeywords');
         }
 
@@ -102,7 +92,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
           const response = await fetch("/api/gpt/summary", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ keywords })
+            body: JSON.stringify({ keywords: currentKeywords })
           });
 
           if (!response.ok) throw new Error("Failed to generate summary");

@@ -34,7 +34,7 @@ interface SupabaseKeyword {
 }
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const cache = new Map<string, CacheEntry<any>>();
+const cache = new Map<string, CacheEntry<unknown>>();
 
 export async function getCachedData<T>(
   key: string,
@@ -44,7 +44,7 @@ export async function getCachedData<T>(
   const now = Date.now();
 
   if (cached && now - cached.timestamp < CACHE_DURATION) {
-    return cached.data;
+    return cached.data as T;
   }
 
   const data = await fetchFn();
