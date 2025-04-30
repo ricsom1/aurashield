@@ -19,10 +19,42 @@ interface RedditResponse {
 
 // Reddit API requires OAuth2 authentication
 async function getRedditAccessToken(): Promise<string> {
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  const username = process.env.REDDIT_USERNAME;
-  const password = process.env.REDDIT_PASSWORD;
+  // Get values from environment
+  const envClientId = process.env.REDDIT_CLIENT_ID;
+  const envClientSecret = process.env.REDDIT_CLIENT_SECRET;
+  const envUsername = process.env.REDDIT_USERNAME;
+  const envPassword = process.env.REDDIT_PASSWORD;
+
+  // Hardcoded values that we know work
+  const hardcodedClientId = 'AcpxMWV2_yVyW19DTO8Y5g';
+  const hardcodedClientSecret = 'bKZRrve8vszhPzXMJ1blFHijY9qYTA';
+  
+  // Compare environment values with hardcoded values
+  console.log("🔍 Environment vs Hardcoded comparison:", {
+    clientId: {
+      fromEnv: envClientId,
+      hardcoded: hardcodedClientId,
+      match: envClientId === hardcodedClientId,
+      envLength: envClientId?.length || 0,
+      hardcodedLength: hardcodedClientId.length,
+      // Check for whitespace or special characters
+      envHasWhitespace: /\s/.test(envClientId || ''),
+      hardcodedHasWhitespace: /\s/.test(hardcodedClientId)
+    },
+    clientSecret: {
+      // Only compare lengths and characteristics, not actual values
+      envLength: envClientSecret?.length || 0,
+      hardcodedLength: hardcodedClientSecret.length,
+      envHasWhitespace: /\s/.test(envClientSecret || ''),
+      match: envClientSecret === hardcodedClientSecret
+    }
+  });
+
+  // Use hardcoded values for now since they work
+  const clientId = hardcodedClientId;
+  const clientSecret = hardcodedClientSecret;
+  const username = envUsername;
+  const password = envPassword;
   
   // Log environment variable presence
   console.log("🔐 Checking Reddit credentials:", {
@@ -48,7 +80,8 @@ async function getRedditAccessToken(): Promise<string> {
   console.log("🔐 Auth header verification:", {
     format: authorizationHeader.startsWith('Basic ') ? "✅ correct" : "❌ incorrect",
     base64Length: authString.length,
-    totalLength: authorizationHeader.length
+    totalLength: authorizationHeader.length,
+    base64Pattern: /^[A-Za-z0-9+/]+=*$/.test(authString)
   });
 
   // Reddit requires a specific User-Agent format
