@@ -51,11 +51,10 @@ async function getRedditAccessToken(): Promise<string> {
 
   const userAgent = 'MenuIQ/1.0 by Ok_Willingness_2450';
 
-  // Prepare request body
+  // Prepare request body for client credentials flow
   const formData = new URLSearchParams();
-  formData.append('grant_type', 'password');
-  formData.append('username', username.trim());
-  formData.append('password', password.trim());
+  formData.append('grant_type', 'client_credentials');
+  // Note: We don't need username/password for client credentials flow
 
   console.log("🔐 Making token request to Reddit...");
   console.log("🔐 Request details:", {
@@ -67,9 +66,7 @@ async function getRedditAccessToken(): Promise<string> {
       'User-Agent': userAgent
     },
     body: {
-      grant_type: 'password',
-      username: username.trim(),
-      password: '[REDACTED]'
+      grant_type: 'client_credentials'
     }
   });
 
