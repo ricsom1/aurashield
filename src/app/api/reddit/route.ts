@@ -59,16 +59,20 @@ async function searchReddit(restaurantName: string) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const restaurantName = searchParams.get('restaurantName');
+    const restaurantEncoded = searchParams.get('restaurantName');
 
-    console.log("Received request with restaurantName:", restaurantName);
+    console.log("Received request with encoded restaurant name:", restaurantEncoded);
 
-    if (!restaurantName) {
+    if (!restaurantEncoded) {
       return NextResponse.json(
         { error: "Restaurant name is required" },
         { status: 400 }
       );
     }
+
+    // Decode the restaurant name from URL encoding
+    const restaurantName = decodeURIComponent(restaurantEncoded);
+    console.log("Decoded restaurant name:", restaurantName);
 
     const posts = await searchReddit(restaurantName);
     
@@ -91,7 +95,7 @@ export async function POST(req: Request) {
   try {
     const { restaurantName } = await req.json();
 
-    console.log("Received POST request with restaurantName:", restaurantName);
+    console.log("Received POST request with restaurant name:", restaurantName);
 
     if (!restaurantName) {
       return NextResponse.json(
