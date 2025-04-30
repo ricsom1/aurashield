@@ -9,7 +9,17 @@ if (!process.env.GOOGLE_PLACES_API_KEY) {
   throw new Error("Missing GOOGLE_PLACES_API_KEY environment variable");
 }
 
-function httpsGet(url: string): Promise<any> {
+interface GooglePlacesResponse {
+  status: string;
+  candidates?: Array<{
+    place_id: string;
+    name: string;
+    formatted_address?: string;
+  }>;
+  error_message?: string;
+}
+
+function httpsGet(url: string): Promise<GooglePlacesResponse> {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
       let data = '';
@@ -20,7 +30,7 @@ function httpsGet(url: string): Promise<any> {
 
       res.on('end', () => {
         try {
-          const parsedData = JSON.parse(data);
+          const parsedData = JSON.parse(data) as GooglePlacesResponse;
           resolve(parsedData);
         } catch (e) {
           reject(e);
@@ -70,9 +80,12 @@ export async function POST(req: Request) {
         );
       }
 
-      const place = data.candidates[0];
-      console.log("Found place:", place);
+      const place = data.candidates?.[0];
+      if (!place) {
+        return NextResponse.json({ error: "No places found" }, { status: 404 });
+      }
 
+      console.log("Found place:", place);
       return NextResponse.json({ place });
     } catch (fetchErr) {
       console.error("Google Places API fetch error:", fetchErr);

@@ -15,11 +15,19 @@ interface GoogleReview {
   time?: number;
 }
 
+interface GooglePlacesDetailsResponse {
+  status: string;
+  result?: {
+    reviews?: GoogleReview[];
+  };
+  error_message?: string;
+}
+
 // Configure runtime
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function httpsGet(url: string): Promise<any> {
+function httpsGet(url: string): Promise<GooglePlacesDetailsResponse> {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
       let data = '';
@@ -30,7 +38,7 @@ function httpsGet(url: string): Promise<any> {
 
       res.on('end', () => {
         try {
-          const parsedData = JSON.parse(data);
+          const parsedData = JSON.parse(data) as GooglePlacesDetailsResponse;
           resolve(parsedData);
         } catch (e) {
           reject(e);
