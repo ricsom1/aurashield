@@ -2,8 +2,10 @@ interface ApiResponse<T> {
   error?: string;
   details?: string;
   status?: number;
-  data?: T;
+  place?: T;
   insertedData?: T[];
+  ok: boolean;
+  statusText: string;
 }
 
 export async function fetchWithRetry<T>(
@@ -31,7 +33,11 @@ export async function fetchWithRetry<T>(
       }));
     }
 
-    return data;
+    return {
+      ...data,
+      ok: response.ok,
+      statusText: response.statusText
+    };
   } catch (error) {
     if (retries > 0) {
       console.log(`Retrying request (${retries} attempts left)...`);
