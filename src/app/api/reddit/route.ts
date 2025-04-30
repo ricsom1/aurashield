@@ -18,130 +18,95 @@ interface RedditResponse {
 }
 
 // Reddit API requires OAuth2 authentication
-async function getRedditAccessToken() {
-  try {
-    // These should be environment variables in production
-    const clientId = process.env.REDDIT_CLIENT_ID;
-    const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+async function getRedditAccessToken(): Promise<string> {
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  const username = process.env.REDDIT_USERNAME;
+  const password = process.env.REDDIT_PASSWORD;
 
-    if (!clientId || !clientSecret) {
-      console.error('Missing Reddit credentials:', { clientId: !!clientId, clientSecret: !!clientSecret });
-      throw new Error('Reddit API credentials not configured');
-    }
-
-    console.log('Attempting to get Reddit access token...');
-    
-    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    
-    const response = await fetch('https://ssl.reddit.com/api/v1/access_token', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${authString}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'MenuIQ/1.0 (by /u/menuiq)'
-      },
-      body: 'grant_type=client_credentials'
+  if (!clientId || !clientSecret || !username || !password) {
+    console.error("Missing Reddit credentials:", {
+      clientId: !!clientId,
+      clientSecret: !!clientSecret,
+      username: !!username,
+      password: !!password
     });
-
-    console.log('Token response status:', response.status);
-
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error('Failed to get access token:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        body: responseText
-      });
-      throw new Error(`Failed to get Reddit access token: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.access_token) {
-      console.error('Invalid token response:', data);
-      throw new Error('Invalid token response from Reddit');
-    }
-
-    console.log('Successfully obtained access token');
-    return data.access_token;
-  } catch (error) {
-    console.error('Error in getRedditAccessToken:', error);
-    throw error;
+    throw new Error("Missing Reddit credentials");
   }
+
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  console.log("🔐 Attempting Reddit authentication with Basic Auth");
+
+  const body = new URLSearchParams({
+    grant_type: 'password',
+    username: username,
+    password: password,
+  });
+
+  const tokenRes = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${basicAuth}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'menuIQ/1.0 by Ok_Willingness_2450'
+    },
+    body: body.toString(),
+  });
+
+  if (!tokenRes.ok) {
+    const error = await tokenRes.text();
+    console.error("❌ Reddit token error:", {
+      status: tokenRes.status,
+      statusText: tokenRes.statusText,
+      error
+    });
+    throw new Error(`Failed to get Reddit access token: ${tokenRes.status} ${error}`);
+  }
+
+  const json = await tokenRes.json();
+  console.log("✅ Reddit Token Success:", {
+    tokenType: json.token_type,
+    expiresIn: json.expires_in
+  });
+  return json.access_token;
 }
 
 async function fetchRedditPosts(restaurantName: string) {
   try {
-    // Log the input
-    console.log('Attempting to fetch Reddit posts for:', restaurantName);
-
-    // Basic validation
-    if (!restaurantName || typeof restaurantName !== 'string') {
-      throw new Error('Invalid restaurant name provided');
-    }
+    console.log("🔍 Fetching Reddit posts for:", restaurantName);
 
     // Get access token
-    const accessToken = await getRedditAccessToken();
+    const token = await getRedditAccessToken();
+    console.log("✅ Access Token acquired:", token);
 
-    // Clean and encode the restaurant name
-    const cleanedName = restaurantName.trim();
-    // Remove quotes if they exist and then add them back after encoding
-    const nameWithoutQuotes = cleanedName.replace(/['"]/g, '');
-    const searchQuery = encodeURIComponent(nameWithoutQuotes);
-    
-    // Construct URL - use double quotes for exact match
-    const url = `https://oauth.reddit.com/search?q="${searchQuery}"&limit=10&sort=relevance&t=all`;
-    console.log('Making request to:', url);
+    // Construct search URL
+    const query = encodeURIComponent(restaurantName);
+    const redditUrl = `https://oauth.reddit.com/search?q=${query}&limit=10&sort=new&type=link`;
+    console.log("🔍 Searching Reddit with URL:", redditUrl);
 
     // Make the request with OAuth token
-    const response = await fetch(url, {
-      method: 'GET',
+    const redditRes = await fetch(redditUrl, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'User-Agent': 'MenuIQ/1.0 (by /u/menuiq)',
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': 'MenuIQApp/0.1 by Ok_Willingness_2450',
         'Accept': 'application/json'
       }
     });
 
-    // Log response details
-    console.log('Reddit API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
+    console.log("🔁 Reddit API Status:", redditRes.status);
+
+    if (!redditRes.ok) {
+      const errorText = await redditRes.text();
+      console.error("❌ Reddit API failed:", errorText);
+      throw new Error(`Reddit API failed: ${redditRes.status} ${errorText}`);
+    }
+
+    const data = await redditRes.json() as RedditResponse;
+    console.log("✅ Reddit API Response:", {
+      postCount: data.data?.children?.length || 0
     });
 
-    // Handle rate limiting
-    if (response.status === 429) {
-      const resetTime = response.headers.get('X-Ratelimit-Reset');
-      throw new Error(`Rate limited by Reddit API. Reset in ${resetTime} seconds`);
-    }
-
-    // Handle non-200 responses
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error('Reddit API error response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        body: responseText
-      });
-      throw new Error(`Reddit API returned ${response.status}: ${response.statusText}`);
-    }
-
-    // Parse response with proper type casting
-    const data = await response.json() as RedditResponse;
-    
-    // Validate response structure
-    if (!data || !data.data || !Array.isArray(data.data.children)) {
-      console.error('Invalid Reddit API response structure:', data);
-      throw new Error('Invalid response structure from Reddit API');
-    }
-
-    console.log('Successfully fetched Reddit posts:', data.data.children.length);
-
-    // Transform and return the posts
-    return data.data.children.map((post: RedditPost) => ({
+    const posts = data.data.children.map((post: RedditPost) => ({
       title: post.data.title,
       subreddit: post.data.subreddit,
       upvotes: post.data.ups,
@@ -150,16 +115,16 @@ async function fetchRedditPosts(restaurantName: string) {
       content: post.data.selftext || ""
     }));
 
+    return posts.length ? posts : [{ message: "No posts found" }];
+
   } catch (error) {
-    // Log the complete error
-    console.error('Error in fetchRedditPosts:', {
-      restaurantName,
+    console.error('❌ Error in fetchRedditPosts:', {
       error: error instanceof Error ? {
         message: error.message,
         stack: error.stack
       } : error
     });
-    throw error; // Re-throw to be handled by the route handler
+    throw error;
   }
 }
 
@@ -178,7 +143,7 @@ export async function GET(req: Request) {
 
     // Decode the restaurant name
     const restaurantName = decodeURIComponent(encodedName);
-    console.log('Processing GET request for restaurant:', restaurantName);
+    console.log('🔍 Processing GET request for restaurant:', restaurantName);
 
     // Fetch posts
     const posts = await fetchRedditPosts(restaurantName);
@@ -187,8 +152,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ posts });
 
   } catch (error) {
-    // Log error details
-    console.error('Error in GET handler:', {
+    console.error('❌ Error in GET handler:', {
       error: error instanceof Error ? {
         name: error.name,
         message: error.message,
@@ -197,10 +161,12 @@ export async function GET(req: Request) {
       url: req.url
     });
 
-    // Return appropriate error response
     return NextResponse.json({
       error: "Failed to fetch Reddit posts",
-      details: error instanceof Error ? error.message : 'Unknown error occurred'
+      details: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack
+      } : 'Unknown error occurred'
     }, {
       status: 500
     });
