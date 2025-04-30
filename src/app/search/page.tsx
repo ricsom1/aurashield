@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { fetchWithRetry } from "@/lib/api";
 
 interface Place {
   place_id: string;
@@ -25,17 +26,10 @@ export default function SearchPage() {
       setError(null);
       setPlace(null);
 
-      const response = await fetch("/api/places/search", {
+      const response = await fetchWithRetry("/api/places/search", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ query }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to search places");
-      }
 
       const data = await response.json();
       console.log("Search response:", data);

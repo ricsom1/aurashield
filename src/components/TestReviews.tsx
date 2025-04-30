@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { fetchWithRetry } from "@/lib/api";
 
 interface Review {
   id: string;
@@ -65,9 +66,8 @@ export default function TestReviews({ sentimentFilter = 'all' }: TestReviewsProp
       setError(null);
 
       console.log("TestReviews - Fetching reviews for place_id:", selectedPlace.place_id);
-      const res = await fetch("/api/reviews", {
+      const res = await fetchWithRetry("/api/reviews", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           placeId: selectedPlace.place_id,
         }),
@@ -75,10 +75,6 @@ export default function TestReviews({ sentimentFilter = 'all' }: TestReviewsProp
 
       const data = await res.json();
       console.log("TestReviews - API response:", data);
-      
-      if (!res.ok) {
-        throw new Error(JSON.stringify(data));
-      }
 
       if (data.insertedData && Array.isArray(data.insertedData)) {
         console.log("TestReviews - Setting reviews:", data.insertedData.length);
