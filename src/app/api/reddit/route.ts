@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchWithRetry } from "@/lib/api";
 
 interface RedditPost {
   data: {
@@ -15,6 +16,59 @@ interface RedditResponse {
   data: {
     children: RedditPost[];
   };
+}
+
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  scope: string;
+}
+
+// Restaurant-related keywords for filtering
+const RESTAURANT_KEYWORDS = [
+  'restaurant', 'food', 'menu', 'dining', 'eat', 'dinner', 'lunch', 'brunch',
+  'breakfast', 'reservation', 'reserve', 'table', 'service', 'waiter', 'server',
+  'chef', 'kitchen', 'dish', 'meal', 'cuisine', 'taste', 'flavor', 'price',
+  'bill', 'tip', 'atmosphere', 'ambiance', 'decor', 'patio', 'bar', 'drink',
+  'cocktail', 'wine', 'beer', 'dessert', 'appetizer', 'entree', 'special',
+  'happy hour', 'review', 'rating', 'stars'
+];
+
+// Austin-related location terms
+const AUSTIN_LOCATIONS = [
+  'Austin', '78701', '78702', '78703', '78704', '78705', '78712', '78722',
+  '78723', '78724', '78725', '78726', '78727', '78728', '78729', '78730',
+  '78731', '78732', '78733', '78734', '78735', '78736', '78737', '78738',
+  '78739', '78741', '78742', '78744', '78745', '78746', '78747', '78748',
+  '78749', '78750', '78751', '78752', '78753', '78754', '78755', '78756',
+  '78757', '78758', '78759', '78760', '78761', '78762', '78763', '78764',
+  '78765', '78766', '78767', '78768', '78769', '78772', '78773', '78774',
+  '78778', '78779', '78780', '78781', '78783', '78799', 'Downtown', 'South',
+  'North', 'East', 'West', 'Central', 'Domain', 'Mueller', 'Zilker', 'Barton',
+  'Cedar Park', 'Round Rock', 'Pflugerville', 'Lake Travis', 'Westlake'
+];
+
+// Helper function to check if text contains any of the keywords
+function containsKeywords(text: string, keywords: string[]): boolean {
+  const lowerText = text.toLowerCase();
+  return keywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
+}
+
+// Helper function to build the search query
+function buildSearchQuery(restaurantName: string): string {
+  // Basic search terms
+  const terms = [
+    `"${restaurantName}"`,
+    `"${restaurantName} restaurant"`,
+    `"${restaurantName} Austin"`
+  ];
+
+  // Add location terms
+  const locationTerms = AUSTIN_LOCATIONS.map(loc => `"${loc}"`).join(' OR ');
+  
+  // Combine all terms
+  return `(${terms.join(' OR ')}) AND (${locationTerms})`;
 }
 
 // Reddit API requires OAuth2 authentication
@@ -96,7 +150,7 @@ async function getRedditAccessToken(): Promise<string> {
   console.log("🔐 Making token request to Reddit...");
 
   try {
-    const tokenRes = await fetch('https://www.reddit.com/api/v1/access_token', {
+    const response = await fetchWithRetry<TokenResponse>('https://www.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: {
         'Authorization': authorizationHeader,
@@ -107,25 +161,17 @@ async function getRedditAccessToken(): Promise<string> {
     });
 
     console.log("🔐 Token response status:", {
-      status: tokenRes.status,
-      statusText: tokenRes.statusText,
-      headers: Object.fromEntries(tokenRes.headers.entries())
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
     });
 
-    if (!tokenRes.ok) {
-      const error = await tokenRes.text();
-      console.error("❌ Token error details:", {
-        status: tokenRes.status,
-        error: error,
-        requestUrl: 'https://www.reddit.com/api/v1/access_token',
-        requestBody: 'grant_type=password&username=[REDACTED]&password=[REDACTED]'
-      });
-      throw new Error(`Failed to get Reddit access token: ${tokenRes.status} ${error}`);
+    if (!response.ok || !response.data) {
+      throw new Error(`Failed to get Reddit access token: ${response.status} ${response.error}`);
     }
 
-    const json = await tokenRes.json();
     console.log("✅ Token request successful");
-    return json.access_token;
+    return response.data.access_token;
   } catch (error) {
     console.error("❌ Token request failed:", error);
     throw error;
@@ -140,15 +186,15 @@ async function fetchRedditPosts(restaurantName: string) {
     const token = await getRedditAccessToken();
     console.log("✅ Access Token acquired:", token);
 
-    // Construct search URL
-    const query = encodeURIComponent(restaurantName);
-    const redditUrl = `https://oauth.reddit.com/search?q=${query}&limit=10&sort=new&type=link`;
+    // Build enhanced search query
+    const searchQuery = buildSearchQuery(restaurantName);
+    const redditUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(searchQuery)}&limit=25&sort=new&type=link`;
     console.log("🔍 Searching Reddit with URL:", redditUrl);
 
     const userAgent = 'script:menuiq:v1.0 (by /u/Ok_Willingness_2450)';
 
-    // Make the request with OAuth token
-    const redditRes = await fetch(redditUrl, {
+    // Make the request with OAuth token and retry logic
+    const response = await fetchWithRetry<RedditResponse>(redditUrl, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'User-Agent': userAgent,
@@ -156,29 +202,58 @@ async function fetchRedditPosts(restaurantName: string) {
       }
     });
 
-    console.log("🔁 Reddit API Status:", redditRes.status);
-
-    if (!redditRes.ok) {
-      const errorText = await redditRes.text();
-      console.error("❌ Reddit API failed:", errorText);
-      throw new Error(`Reddit API failed: ${redditRes.status} ${errorText}`);
+    if (!response.ok || !response.data) {
+      throw new Error(`Reddit API failed: ${response.status} ${response.error}`);
     }
 
-    const data = await redditRes.json() as RedditResponse;
-    console.log("✅ Reddit API Response:", {
-      postCount: data.data?.children?.length || 0
+    console.log("✅ Raw Reddit API Response:", {
+      postCount: response.data.data?.children?.length || 0
     });
 
-    const posts = data.data.children.map((post: RedditPost) => ({
-      title: post.data.title,
-      subreddit: post.data.subreddit,
-      upvotes: post.data.ups,
-      permalink: `https://reddit.com${post.data.permalink}`,
-      timestamp: post.data.created_utc * 1000,
-      content: post.data.selftext || ""
-    }));
+    // Filter posts for relevance
+    const filteredPosts = response.data.data.children
+      .filter(post => {
+        const title = post.data.title.toLowerCase();
+        const content = (post.data.selftext || '').toLowerCase();
+        const fullText = `${title} ${content}`;
 
-    return posts.length ? posts : [{ message: "No posts found" }];
+        // Check if post contains restaurant keywords
+        const hasRestaurantKeywords = containsKeywords(fullText, RESTAURANT_KEYWORDS);
+        
+        // Check if post contains Austin location terms
+        const hasLocationTerms = containsKeywords(fullText, AUSTIN_LOCATIONS);
+
+        // Log post details for debugging
+        console.log("🔍 Post analysis:", {
+          title: post.data.title,
+          hasRestaurantKeywords,
+          hasLocationTerms,
+          subreddit: post.data.subreddit,
+          permalink: `https://reddit.com${post.data.permalink}`
+        });
+
+        return hasRestaurantKeywords && hasLocationTerms;
+      })
+      .map((post: RedditPost) => ({
+        title: post.data.title,
+        subreddit: post.data.subreddit,
+        upvotes: post.data.ups,
+        permalink: `https://reddit.com${post.data.permalink}`,
+        timestamp: post.data.created_utc * 1000,
+        content: post.data.selftext || ""
+      }));
+
+    console.log("✅ Filtered posts:", {
+      totalPosts: response.data.data.children.length,
+      filteredPosts: filteredPosts.length
+    });
+
+    return filteredPosts.length > 0 
+      ? filteredPosts 
+      : [{ 
+          message: "No Reddit discussions found about this restaurant yet. Check back soon!",
+          isFallback: true
+        }];
 
   } catch (error) {
     console.error('❌ Error in fetchRedditPosts:', {

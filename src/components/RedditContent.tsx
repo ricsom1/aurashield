@@ -10,6 +10,8 @@ interface RedditPost {
   permalink: string;
   timestamp: number;
   content: string;
+  isFallback?: boolean;
+  message?: string;
 }
 
 export default function RedditContent() {
@@ -134,7 +136,7 @@ export default function RedditContent() {
               <h2 className="text-lg font-medium text-gray-900">Reddit Analysis</h2>
               <button
                 onClick={generateSummary}
-                disabled={isLoading || isSummarizing || posts.length === 0}
+                disabled={isLoading || isSummarizing || posts.length === 0 || posts[0].isFallback}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed"
               >
                 {isSummarizing ? (
@@ -179,9 +181,9 @@ export default function RedditContent() {
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           </div>
-        ) : posts.length === 0 ? (
+        ) : posts.length === 0 || posts[0].isFallback ? (
           <div className="bg-white shadow-sm rounded-lg p-6 text-center">
-            <p className="text-gray-500">No Reddit mentions found for this restaurant.</p>
+            <p className="text-gray-500">{posts[0]?.message || "No Reddit discussions found about this restaurant yet. Check back soon!"}</p>
           </div>
         ) : (
           /* Reddit Posts List */
