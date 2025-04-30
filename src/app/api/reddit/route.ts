@@ -19,9 +19,9 @@ interface RedditResponse {
 
 // Reddit API requires OAuth2 authentication
 async function getRedditAccessToken(): Promise<string> {
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  // We don't need username and password for client_credentials grant type
+  // TEMPORARY HARDCODED VALUES FOR TESTING ONLY!
+  const clientId = 'AcpxMWV2_yVyW19DTO8Y5g';
+  const clientSecret = 'bKZRrve8vszhPzXMJ1blFHijY9qYTA';
   
   // More detailed logging for debugging
   console.log("🔐 Environment variables check:", {
@@ -41,16 +41,24 @@ async function getRedditAccessToken(): Promise<string> {
   }
 
   // Construct Basic Auth header
-  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const authString = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const authorizationHeader = `Basic ${authString}`;
+  
+  console.log("--- Verification Logs ---");
+  console.log("Client ID (Hardcoded):", clientId);
+  console.log("Client Secret (Hardcoded):", clientSecret);
+  console.log("Base64 Encoded String:", authString);
+  console.log("Authorization Header (Being Sent):", authorizationHeader);
+  console.log("--- End Verification Logs ---");
   
   // Verify Basic Auth construction
   console.log("🔐 Basic Auth verification:", {
     expectedClientId: clientId,
     expectedClientSecret: clientSecret?.slice(0, 4) + '...',  // Only log first 4 chars for security
-    base64Length: basicAuth.length,
-    authHeaderFormat: `Basic ${basicAuth.slice(0, 4)}...`,  // Only log first 4 chars for security
+    base64Length: authString.length,
+    authHeaderFormat: authorizationHeader.slice(0, 10) + '...',  // Only log beginning for security
     containsColonInOriginal: `${clientId}:${clientSecret}`.includes(':'),
-    base64Pattern: /^[A-Za-z0-9+/]+=*$/.test(basicAuth)
+    base64Pattern: /^[A-Za-z0-9+/]+=*$/.test(authString)
   });
 
   // Reddit requires a specific User-Agent format
@@ -73,28 +81,18 @@ async function getRedditAccessToken(): Promise<string> {
     url: 'https://ssl.reddit.com/api/v1/access_token',
     method: 'POST',
     headers: {
-      'Authorization': 'Basic [REDACTED]',
+      'Authorization': authorizationHeader,
       'Content-Type': 'application/x-www-form-urlencoded',
       'User-Agent': userAgent
     },
-    body: {
-      grant_type: 'client_credentials'
-    }
+    body: formData.toString()
   });
 
   try {
-    // Test the Basic Auth string separately
-    const testAuthHeader = `Basic ${basicAuth}`;
-    console.log("🔐 Testing Basic Auth header:", {
-      startsWithBasic: testAuthHeader.startsWith('Basic '),
-      hasOneSpace: (testAuthHeader.match(/ /g) || []).length === 1,
-      headerLength: testAuthHeader.length
-    });
-
     const tokenRes = await fetch('https://ssl.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${basicAuth}`,
+        'Authorization': authorizationHeader,
         'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent': userAgent
       },
@@ -125,12 +123,11 @@ async function getRedditAccessToken(): Promise<string> {
         headers: Object.fromEntries(tokenRes.headers.entries()),
         requestUrl: 'https://ssl.reddit.com/api/v1/access_token',
         requestHeaders: {
-          'Authorization': 'Basic [REDACTED]',
+          'Authorization': authorizationHeader,
           'Content-Type': 'application/x-www-form-urlencoded',
           'User-Agent': userAgent
         },
-        requestBody: formData.toString(),
-        authHeaderFormat: testAuthHeader.replace(basicAuth, '[REDACTED]')
+        requestBody: formData.toString()
       };
       console.error("❌ Reddit token error:", errorDetails);
       throw new Error(`Failed to get Reddit access token: ${tokenRes.status} ${error}`);
