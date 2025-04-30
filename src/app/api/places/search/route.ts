@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import https from 'https';
 
 // Configure runtime
 export const runtime = 'nodejs';
@@ -6,6 +7,29 @@ export const dynamic = 'force-dynamic';
 
 if (!process.env.GOOGLE_PLACES_API_KEY) {
   throw new Error("Missing GOOGLE_PLACES_API_KEY environment variable");
+}
+
+function httpsGet(url: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const parsedData = JSON.parse(data);
+          resolve(parsedData);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }).on('error', (err) => {
+      reject(err);
+    });
+  });
 }
 
 export async function POST(req: Request) {
@@ -27,20 +51,7 @@ export async function POST(req: Request) {
     console.log("Calling Google Places API with URL:", findPlaceUrl.replace(process.env.GOOGLE_PLACES_API_KEY!, '[REDACTED]'));
 
     try {
-      const res = await fetch(findPlaceUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        next: { revalidate: 0 }
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
+      const data = await httpsGet(findPlaceUrl);
       console.log("Google Places API response:", data);
 
       if (data.status === "ZERO_RESULTS") {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { classifySentiment } from "@/lib/gptSentiment";
+import https from 'https';
 
 // Check environment variables
 if (!process.env.GOOGLE_PLACES_API_KEY) {
@@ -18,6 +19,29 @@ interface GoogleReview {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+function httpsGet(url: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const parsedData = JSON.parse(data);
+          resolve(parsedData);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }).on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const { placeId } = await req.json();
@@ -31,22 +55,7 @@ export async function POST(req: Request) {
     console.log("Fetching from Google Places API URL:", url.replace(process.env.GOOGLE_PLACES_API_KEY!, '[REDACTED]'));
 
     try {
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        next: { revalidate: 0 }
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      console.log("Google Places API fetch response status:", res.status);
-      
-      const data = await res.json();
+      const data = await httpsGet(url);
       console.log("Google Places API response:", {
         status: data.status,
         hasResult: !!data.result,
