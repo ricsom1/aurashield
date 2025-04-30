@@ -17,6 +17,36 @@ interface RedditResponse {
   };
 }
 
+// Reddit API requires OAuth2 authentication
+async function getRedditAccessToken() {
+  // These should be environment variables in production
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Reddit API credentials not configured');
+  }
+
+  const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  
+  const response = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'MenuIQ/1.0 (by /u/menuiq)'
+    },
+    body: 'grant_type=client_credentials'
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to get Reddit access token: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.access_token;
+}
+
 async function fetchRedditPosts(restaurantName: string) {
   try {
     // Log the input
@@ -27,22 +57,25 @@ async function fetchRedditPosts(restaurantName: string) {
       throw new Error('Invalid restaurant name provided');
     }
 
+    // Get access token
+    const accessToken = await getRedditAccessToken();
+
     // Clean and encode the restaurant name
     const cleanedName = restaurantName.trim();
-    const searchQuery = encodeURIComponent(cleanedName);
+    const searchQuery = encodeURIComponent(`"${cleanedName}"`);
     
     // Construct URL
-    const url = `https://www.reddit.com/search.json?q=${searchQuery}&limit=10&sort=relevance&t=all`;
+    const url = `https://oauth.reddit.com/search?q=${searchQuery}&limit=10&sort=relevance&t=all`;
     console.log('Making request to:', url);
 
-    // Make the request with detailed options
+    // Make the request with OAuth token
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'User-Agent': 'MenuIQ/1.0 (Web App; contact@menuiq.com)',
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'MenuIQ/1.0 (by /u/menuiq)',
         'Accept': 'application/json'
-      },
-      cache: 'no-store'
+      }
     });
 
     // Log response details
@@ -51,6 +84,12 @@ async function fetchRedditPosts(restaurantName: string) {
       statusText: response.statusText,
       headers: Object.fromEntries(response.headers.entries())
     });
+
+    // Handle rate limiting
+    if (response.status === 429) {
+      const resetTime = response.headers.get('X-Ratelimit-Reset');
+      throw new Error(`Rate limited by Reddit API. Reset in ${resetTime} seconds`);
+    }
 
     // Handle non-200 responses
     if (!response.ok) {
