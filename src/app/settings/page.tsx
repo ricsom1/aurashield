@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Settings - MenuIQ",
-  description: "Configure your MenuIQ dashboard settings.",
+  title: "Settings - AuraShield",
+  description: "Configure your AuraShield dashboard settings.",
 };
 
 export default function SettingsPage() {
@@ -10,7 +10,9 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Configure your AuraShield dashboard preferences and integrations.
+          </h1>
           <p className="mt-2 text-sm text-gray-600">
             Configure your MenuIQ dashboard preferences and integrations.
           </p>

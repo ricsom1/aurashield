@@ -79,8 +79,8 @@ export default function SearchPage() {
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
             Find Your Restaurant
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Search for your restaurant to get started with MenuIQ
+          <p className="text-gray-600 mb-8">
+            Search for your restaurant to get started with AuraShield
           </p>
         </div>
 

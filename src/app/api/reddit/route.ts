@@ -25,6 +25,12 @@ interface TokenResponse {
   scope: string;
 }
 
+// Target subreddits for restaurant discussions
+const TARGET_SUBREDDITS = [
+  'Austin', 'BBQ', 'food', 'texas', 'AskAustin', 'austinfood',
+  'TexasBBQ', 'FoodPorn', 'restaurants', 'austineats'
+];
+
 // Restaurant-related keywords for filtering
 const RESTAURANT_KEYWORDS = [
   'restaurant', 'food', 'menu', 'dining', 'eat', 'dinner', 'lunch', 'brunch',
@@ -32,43 +38,101 @@ const RESTAURANT_KEYWORDS = [
   'chef', 'kitchen', 'dish', 'meal', 'cuisine', 'taste', 'flavor', 'price',
   'bill', 'tip', 'atmosphere', 'ambiance', 'decor', 'patio', 'bar', 'drink',
   'cocktail', 'wine', 'beer', 'dessert', 'appetizer', 'entree', 'special',
-  'happy hour', 'review', 'rating', 'stars'
+  'happy hour', 'review', 'rating', 'stars', 'bbq', 'ribs', 'brisket'
 ];
 
 // Austin-related location terms
 const AUSTIN_LOCATIONS = [
-  'Austin', '78701', '78702', '78703', '78704', '78705', '78712', '78722',
-  '78723', '78724', '78725', '78726', '78727', '78728', '78729', '78730',
-  '78731', '78732', '78733', '78734', '78735', '78736', '78737', '78738',
-  '78739', '78741', '78742', '78744', '78745', '78746', '78747', '78748',
-  '78749', '78750', '78751', '78752', '78753', '78754', '78755', '78756',
-  '78757', '78758', '78759', '78760', '78761', '78762', '78763', '78764',
-  '78765', '78766', '78767', '78768', '78769', '78772', '78773', '78774',
-  '78778', '78779', '78780', '78781', '78783', '78799', 'Downtown', 'South',
-  'North', 'East', 'West', 'Central', 'Domain', 'Mueller', 'Zilker', 'Barton',
-  'Cedar Park', 'Round Rock', 'Pflugerville', 'Lake Travis', 'Westlake'
+  'Austin', 'Downtown', 'South', 'North', 'East', 'West', 'Central',
+  'Domain', 'Mueller', 'Zilker', 'Barton', 'Cedar Park', 'Round Rock',
+  'Pflugerville', 'Lake Travis', 'Westlake', 'South Congress', 'SoCo',
+  'East Side', 'West Lake', '78701', '78702', '78703', '78704'
 ];
+
+// Helper function to normalize text
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[''""]|['']/g, '') // Remove all types of quotes and apostrophes
+    .replace(/[^a-z0-9\s-]/g, ' ') // Replace other punctuation with space, keep hyphens
+    .replace(/\s+/g, ' ') // Normalize spaces
+    .trim();
+}
+
+// Helper function to generate name variants
+function generateNameVariants(restaurantName: string): string[] {
+  const normalized = normalizeText(restaurantName);
+  const words = normalized.split(' ');
+  
+  // Generate base variants
+  const variants = new Set([
+    normalized,
+    words.join(''), // no spaces
+    words.slice(0, 2).join(' '), // first two words
+  ]);
+
+  // Add variants without 's' at the end
+  variants.forEach(variant => {
+    if (variant.endsWith('s')) {
+      variants.add(variant.slice(0, -1));
+    }
+  });
+
+  // Add BBQ-specific variants
+  const bbqVariants = ['barbecue', 'bbq', 'bar b que', 'bar-b-q', 'bar b q'];
+  if (bbqVariants.some(v => normalized.includes(v))) {
+    bbqVariants.forEach(variant => {
+      bbqVariants.forEach(replacement => {
+        variants.add(normalized.replace(variant, replacement));
+      });
+    });
+  }
+
+  // Add specific restaurant variants
+  if (normalized.includes('terry')) {
+    variants.add('terry blacks');
+    variants.add('terry black');
+    variants.add('terryblacks');
+    variants.add('terry blacks bbq');
+    variants.add('terry black bbq');
+  }
+
+  // Log variants for debugging
+  console.log("🔍 Generated name variants:", Array.from(variants));
+  
+  return Array.from(variants);
+}
 
 // Helper function to check if text contains any of the keywords
 function containsKeywords(text: string, keywords: string[]): boolean {
-  const lowerText = text.toLowerCase();
-  return keywords.some(keyword => lowerText.includes(keyword.toLowerCase()));
+  const normalizedText = normalizeText(text);
+  return keywords.some(keyword => normalizedText.includes(normalizeText(keyword)));
 }
 
 // Helper function to build the search query
 function buildSearchQuery(restaurantName: string): string {
-  // Basic search terms
-  const terms = [
-    `"${restaurantName}"`,
-    `"${restaurantName} restaurant"`,
-    `"${restaurantName} Austin"`
-  ];
-
-  // Add location terms
-  const locationTerms = AUSTIN_LOCATIONS.map(loc => `"${loc}"`).join(' OR ');
+  const nameVariants = generateNameVariants(restaurantName);
   
-  // Combine all terms
-  return `(${terms.join(' OR ')}) AND (${locationTerms})`;
+  // Build simpler name terms - just search for the variants directly
+  const nameTerms = nameVariants
+    .map(variant => `"${variant}"`)
+    .join(' OR ');
+  
+  // Add subreddit filtering
+  const subredditTerms = TARGET_SUBREDDITS
+    .map(sub => `subreddit:${sub}`)
+    .join(' OR ');
+  
+  // Add BBQ-specific terms for relevant restaurants
+  const bbqTerms = restaurantName.toLowerCase().includes('bbq') || 
+                  restaurantName.toLowerCase().includes('barbecue') ?
+    'AND (brisket OR ribs OR bbq OR "smoked meat" OR barbecue)' : '';
+  
+  // Build final query - simpler structure
+  const query = `(${nameTerms}) AND (${subredditTerms}) ${bbqTerms}`;
+  
+  console.log("🔍 Built search query:", query);
+  return query;
 }
 
 // Reddit API requires OAuth2 authentication
@@ -139,7 +203,7 @@ async function getRedditAccessToken(): Promise<string> {
   });
 
   // Reddit requires a specific User-Agent format
-  const userAgent = 'script:menuiq:v1.0 (by /u/Ok_Willingness_2450)';
+  const userAgent = 'script:aurashield:v1.0 (by /u/Ok_Willingness_2450)';
 
   // Prepare request body for password grant type
   const formData = new URLSearchParams();
@@ -184,16 +248,20 @@ async function fetchRedditPosts(restaurantName: string) {
 
     // Get access token
     const token = await getRedditAccessToken();
-    console.log("✅ Access Token acquired:", token);
+    console.log("✅ Access Token acquired");
 
-    // Build enhanced search query
-    const searchQuery = buildSearchQuery(restaurantName);
-    const redditUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(searchQuery)}&limit=25&sort=new&type=link`;
+    // Generate name variants
+    const nameVariants = generateNameVariants(restaurantName);
+    console.log("🔍 Using name variants:", nameVariants);
+
+    // Build simpler search query
+    const query = `(${nameVariants.map(v => `"${v}"`).join(' OR ')}) AND (subreddit:Austin OR subreddit:BBQ OR subreddit:food OR subreddit:austinfood OR subreddit:TexasBBQ)`;
+    const redditUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&sort=relevance&limit=100&type=link`;
     console.log("🔍 Searching Reddit with URL:", redditUrl);
 
-    const userAgent = 'script:menuiq:v1.0 (by /u/Ok_Willingness_2450)';
+    const userAgent = 'script:aurashield:v1.0 (by /u/Ok_Willingness_2450)';
 
-    // Make the request with OAuth token and retry logic
+    // Make the request with OAuth token
     const response = await fetchWithRetry<RedditResponse>(redditUrl, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -210,29 +278,29 @@ async function fetchRedditPosts(restaurantName: string) {
       postCount: response.data.data?.children?.length || 0
     });
 
-    // Filter posts for relevance
+    // Log all raw post titles for debugging
+    response.data.data.children.forEach((post, index) => {
+      console.log(`📝 Raw post found:`, {
+        title: post.data.title,
+        subreddit: post.data.subreddit,
+        url: `https://reddit.com${post.data.permalink}`,
+        score: post.data.ups,
+        content: post.data.selftext?.substring(0, 100) // Log first 100 chars of content
+      });
+    });
+
+    // Filter and process posts
     const filteredPosts = response.data.data.children
       .filter(post => {
         const title = post.data.title.toLowerCase();
         const content = (post.data.selftext || '').toLowerCase();
         const fullText = `${title} ${content}`;
+        const normalizedFullText = normalizeText(fullText);
 
-        // Check if post contains restaurant keywords
-        const hasRestaurantKeywords = containsKeywords(fullText, RESTAURANT_KEYWORDS);
-        
-        // Check if post contains Austin location terms
-        const hasLocationTerms = containsKeywords(fullText, AUSTIN_LOCATIONS);
-
-        // Log post details for debugging
-        console.log("🔍 Post analysis:", {
-          title: post.data.title,
-          hasRestaurantKeywords,
-          hasLocationTerms,
-          subreddit: post.data.subreddit,
-          permalink: `https://reddit.com${post.data.permalink}`
-        });
-
-        return hasRestaurantKeywords && hasLocationTerms;
+        // Check if post contains any name variant
+        return nameVariants.some(variant => 
+          normalizedFullText.includes(normalizeText(variant))
+        );
       })
       .map((post: RedditPost) => ({
         title: post.data.title,
@@ -245,7 +313,8 @@ async function fetchRedditPosts(restaurantName: string) {
 
     console.log("✅ Filtered posts:", {
       totalPosts: response.data.data.children.length,
-      filteredPosts: filteredPosts.length
+      filteredPosts: filteredPosts.length,
+      matchedSubreddits: [...new Set(filteredPosts.map(p => p.subreddit))]
     });
 
     return filteredPosts.length > 0 

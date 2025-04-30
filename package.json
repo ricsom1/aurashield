@@ -1,5 +1,6 @@
 {
-  "name": "menuiq",
+  "name": "aurashield",
+  "description": "AuraShield – Reputation Intelligence for Creators",
   "version": "0.1.0",
   "private": true,
   "scripts": {

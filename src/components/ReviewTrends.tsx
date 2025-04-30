@@ -12,9 +12,10 @@ interface Keyword {
 
 interface ReviewTrendsProps {
   placeId: string;
+  onError?: (error: string) => void;
 }
 
-export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
+export default function ReviewTrends({ placeId, onError }: ReviewTrendsProps) {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [summary, setSummary] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -116,7 +117,9 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
           endMetric('generateSummary');
         } catch (err) {
           console.error("GPT summary error:", err);
-          setSummary("Not enough data for insights yet.");
+          const errorMessage = "Failed to analyze reviews. Please try again later.";
+          setSummary(errorMessage);
+          onError?.(errorMessage);
         }
       } catch (err) {
         console.error("Review analysis error:", err);
@@ -131,7 +134,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
     if (placeId) {
       fetchReviews();
     }
-  }, [placeId]);
+  }, [placeId, onError]);
 
   if (isLoading) {
     return (

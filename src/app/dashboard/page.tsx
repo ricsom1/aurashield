@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [selectedPlace, setSelectedPlace] = useState<{ place_id: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const filters: SentimentFilter[] = ["all", "positive", "neutral", "negative"];
 
   useEffect(() => {
@@ -21,16 +22,26 @@ export default function DashboardPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const savedPlace = localStorage.getItem("selectedPlace");
-        
-        if (!savedPlace) {
-          console.log("Dashboard: No place selected, redirecting to search");
+        setSummaryError(null);
+
+        let savedPlace = null;
+        try {
+          savedPlace = localStorage.getItem("selectedPlace");
+          if (savedPlace) {
+            const parsedPlace = JSON.parse(savedPlace);
+            setSelectedPlace(parsedPlace);
+          } else {
+            console.log("Dashboard: No place selected, redirecting to search");
+            router.push("/search");
+            return;
+          }
+        } catch (err) {
+          console.error("Error parsing localStorage data:", err);
+          localStorage.removeItem("selectedPlace");
           router.push("/search");
           return;
         }
 
-        const parsedPlace = JSON.parse(savedPlace);
-        setSelectedPlace(parsedPlace);
       } catch (err) {
         console.error("Error loading place:", err);
         setError("Failed to load restaurant data. Please try again.");
@@ -76,7 +87,15 @@ export default function DashboardPage() {
         {/* Review Trends */}
         {selectedPlace && (
           <div className="mb-8">
-            <ReviewTrends placeId={selectedPlace.place_id} />
+            <ReviewTrends 
+              placeId={selectedPlace.place_id} 
+              onError={(err) => setSummaryError(err)}
+            />
+            {summaryError && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-red-600">{summaryError}</p>
+              </div>
+            )}
           </div>
         )}
 

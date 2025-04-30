@@ -18,7 +18,9 @@ export default function Header() {
   return (
     <nav className="w-full flex justify-between items-center px-6 py-4 border-b bg-white shadow-sm">
       <div className="text-xl font-bold text-black">
-        MenuIQ
+        <Link href="/" className="text-xl font-bold text-gray-800 hover:text-gray-600">
+          AuraShield
+        </Link>
       </div>
       <div className="flex items-center space-x-4">
         <Link href="/dashboard" className="text-sm text-gray-700 hover:text-black transition">Dashboard</Link>

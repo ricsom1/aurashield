@@ -1,6 +1,8 @@
-# MenuIQ
+# AuraShield
 
-A modern dashboard for restaurant owners to analyze and understand their Google Reviews using AI-powered sentiment analysis.
+AuraShield – Reputation Intelligence for Creators
+
+Modern reputation monitoring and analysis platform that helps creators and businesses understand and improve their online presence.
 
 ## Features
 

@@ -13,7 +13,7 @@ export default function DashboardHeader() {
             onClick={() => router.push("/dashboard")} 
             className="text-2xl font-semibold text-gray-900 cursor-pointer hover:text-gray-600"
           >
-            MenuIQ Dashboard
+            AuraShield Dashboard
           </h1>
           <div className="flex items-center gap-4">
             <button
