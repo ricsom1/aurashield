@@ -3,7 +3,7 @@ export async function fetchWithRetry(
   options: RequestInit,
   retries = 3,
   backoff = 300
-): Promise<Response> {
+): Promise<any> {
   try {
     const response = await fetch(url, {
       ...options,
@@ -13,13 +13,20 @@ export async function fetchWithRetry(
       },
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(JSON.stringify({
+        error: data.error || 'An error occurred',
+        details: data.details || response.statusText,
+        status: response.status
+      }));
     }
 
-    return response;
+    return data;
   } catch (error) {
     if (retries > 0) {
+      console.log(`Retrying request (${retries} attempts left)...`);
       await new Promise(resolve => setTimeout(resolve, backoff));
       return fetchWithRetry(url, options, retries - 1, backoff * 2);
     }

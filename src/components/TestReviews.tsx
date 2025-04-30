@@ -66,27 +66,39 @@ export default function TestReviews({ sentimentFilter = 'all' }: TestReviewsProp
       setError(null);
 
       console.log("TestReviews - Fetching reviews for place_id:", selectedPlace.place_id);
-      const res = await fetchWithRetry("/api/reviews", {
+      const data = await fetchWithRetry("/api/reviews", {
         method: "POST",
         body: JSON.stringify({
           placeId: selectedPlace.place_id,
         }),
       });
 
-      const data = await res.json();
       console.log("TestReviews - API response:", data);
 
       if (data.insertedData && Array.isArray(data.insertedData)) {
         console.log("TestReviews - Setting reviews:", data.insertedData.length);
         setReviews(data.insertedData);
+      } else {
+        console.error("TestReviews - Invalid response format:", data);
+        setError({ 
+          error: "Invalid response format", 
+          details: "The server returned an unexpected response format" 
+        });
       }
     } catch (err) {
       console.error("TestReviews - Error syncing reviews:", err);
       try {
         const errorData = JSON.parse(err instanceof Error ? err.message : String(err));
-        setError(errorData);
-      } catch {
-        setError({ error: "Failed to sync reviews" });
+        setError({
+          error: errorData.error || "Failed to sync reviews",
+          details: errorData.details || "An unexpected error occurred"
+        });
+      } catch (parseErr) {
+        console.error("TestReviews - Error parsing error response:", parseErr);
+        setError({ 
+          error: "Failed to sync reviews",
+          details: err instanceof Error ? err.message : "An unexpected error occurred"
+        });
       }
     } finally {
       setIsLoading(false);
