@@ -60,7 +60,7 @@ async function getRedditAccessToken(): Promise<string> {
 
   console.log("🔐 Making token request to Reddit...");
   console.log("🔐 Request details:", {
-    url: 'https://www.reddit.com/api/v1/access_token',
+    url: 'https://ssl.reddit.com/api/v1/access_token',
     method: 'POST',
     headers: {
       'Authorization': 'Basic [REDACTED]',
@@ -75,7 +75,7 @@ async function getRedditAccessToken(): Promise<string> {
   });
 
   try {
-    const tokenRes = await fetch('https://www.reddit.com/api/v1/access_token', {
+    const tokenRes = await fetch('https://ssl.reddit.com/api/v1/access_token', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${basicAuth}`,
@@ -90,12 +90,24 @@ async function getRedditAccessToken(): Promise<string> {
 
     if (!tokenRes.ok) {
       const error = await tokenRes.text();
-      console.error("❌ Reddit token error:", {
+      const errorDetails = {
         status: tokenRes.status,
         statusText: tokenRes.statusText,
         error,
-        headers: Object.fromEntries(tokenRes.headers.entries())
-      });
+        headers: Object.fromEntries(tokenRes.headers.entries()),
+        requestUrl: 'https://ssl.reddit.com/api/v1/access_token',
+        requestHeaders: {
+          'Authorization': 'Basic [REDACTED]',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': userAgent
+        },
+        requestBody: {
+          grant_type: 'password',
+          username: '[REDACTED]',
+          password: '[REDACTED]'
+        }
+      };
+      console.error("❌ Reddit token error:", errorDetails);
       throw new Error(`Failed to get Reddit access token: ${tokenRes.status} ${error}`);
     }
 
