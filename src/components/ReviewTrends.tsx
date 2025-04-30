@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bar } from "react-chartjs-2";
 import { getSupabaseClient } from "@/lib/supabase";
 
 interface Keyword {
@@ -12,6 +11,12 @@ interface Keyword {
 
 interface ReviewTrendsProps {
   placeId: string;
+}
+
+interface Review {
+  text: string;
+  sentiment: string;
+  created_at: string;
 }
 
 export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
@@ -29,7 +34,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
         const supabase = getSupabaseClient();
         const { data: reviews, error: fetchError } = await supabase
           .from("reviews")
-          .select("sentiment, created_at")
+          .select("text, sentiment, created_at")
           .eq("place_id", placeId)
           .order("created_at", { ascending: true });
 
@@ -48,7 +53,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
         // Extract keywords and their sentiment
         const keywordMap = new Map<string, { count: number; sentiment: string }>();
         
-        reviews.forEach(review => {
+        (reviews as Review[]).forEach(review => {
           // Simple keyword extraction - split by spaces and remove common words
           const words = review.text.toLowerCase()
             .split(/\s+/)
