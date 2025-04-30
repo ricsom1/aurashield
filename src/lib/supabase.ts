@@ -27,7 +27,13 @@ export function getSupabaseAdmin() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!serviceRoleKey || !supabaseUrl) {
-    console.error('Missing Supabase admin credentials');
+    console.error('Missing Supabase admin credentials:', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!serviceRoleKey,
+      serviceKeyLength: serviceRoleKey?.length || 0,
+      environment: process.env.NODE_ENV,
+      isServer: typeof window === 'undefined'
+    });
     throw new Error('Missing Supabase env vars (SUPABASE_SERVICE_ROLE_KEY or URL)');
   }
 
