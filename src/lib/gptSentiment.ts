@@ -2,16 +2,18 @@ import OpenAI from 'openai';
 
 export type Sentiment = 'positive' | 'negative' | 'neutral';
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing OPENAI_API_KEY environment variable');
-}
-
-const openai = new OpenAI({
+// Only initialize OpenAI client on the server side
+const openai = typeof window === 'undefined' ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+  fetch: fetch, // Use global fetch
+}) : null;
 
 export async function classifySentiment(text: string): Promise<Sentiment> {
   try {
+    if (!openai) {
+      throw new Error('OpenAI client not initialized');
+    }
+
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
