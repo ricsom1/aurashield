@@ -14,6 +14,10 @@ interface GoogleReview {
   time?: number;
 }
 
+// Configure runtime
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const { placeId } = await req.json();
@@ -27,7 +31,19 @@ export async function POST(req: Request) {
     console.log("Fetching from Google Places API URL:", url.replace(process.env.GOOGLE_PLACES_API_KEY!, '[REDACTED]'));
 
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 0 }
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       console.log("Google Places API fetch response status:", res.status);
       
       const data = await res.json();
@@ -121,7 +137,10 @@ export async function POST(req: Request) {
       });
     } catch (fetchErr) {
       console.error("Google Places API fetch error:", fetchErr);
-      throw fetchErr;
+      return NextResponse.json({ 
+        error: "Failed to fetch from Google Places API",
+        details: fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
+      }, { status: 500 });
     }
   } catch (err) {
     console.error("Review fetch failed:", {
