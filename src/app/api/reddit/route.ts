@@ -17,6 +17,9 @@ async function searchReddit(restaurantName: string) {
   const url = `https://www.reddit.com/search.json?q=${query}&limit=10&sort=relevance&t=all`;
 
   console.log("Fetching Reddit data for:", restaurantName);
+  console.log("Search query:", query);
+  console.log("Reddit API URL:", url);
+
   const response = await fetch(url, {
     headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -27,8 +30,12 @@ async function searchReddit(restaurantName: string) {
   });
 
   if (!response.ok) {
-    console.error("Reddit API error:", response.status, response.statusText);
-    throw new Error(`Failed to fetch from Reddit: ${response.status}`);
+    console.error("Reddit API error:", {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+    throw new Error(`Failed to fetch from Reddit: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
@@ -54,6 +61,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const restaurantName = searchParams.get('restaurantName');
 
+    console.log("Received request with restaurantName:", restaurantName);
+
     if (!restaurantName) {
       return NextResponse.json(
         { error: "Restaurant name is required" },
@@ -66,7 +75,11 @@ export async function GET(req: Request) {
     // If we got no posts, still return a 200 with empty array
     return NextResponse.json({ posts });
   } catch (err) {
-    console.error("Reddit search error:", err);
+    console.error("Reddit search error:", {
+      error: err,
+      message: err instanceof Error ? err.message : "Unknown error",
+      stack: err instanceof Error ? err.stack : undefined
+    });
     return NextResponse.json(
       { error: "Failed to search Reddit", details: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
@@ -78,6 +91,8 @@ export async function POST(req: Request) {
   try {
     const { restaurantName } = await req.json();
 
+    console.log("Received POST request with restaurantName:", restaurantName);
+
     if (!restaurantName) {
       return NextResponse.json(
         { error: "Restaurant name is required" },
@@ -88,7 +103,11 @@ export async function POST(req: Request) {
     const posts = await searchReddit(restaurantName);
     return NextResponse.json({ posts });
   } catch (err) {
-    console.error("Reddit search error:", err);
+    console.error("Reddit search error:", {
+      error: err,
+      message: err instanceof Error ? err.message : "Unknown error",
+      stack: err instanceof Error ? err.stack : undefined
+    });
     return NextResponse.json(
       { error: "Failed to search Reddit", details: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
