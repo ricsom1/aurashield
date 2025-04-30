@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 // For client-side operations (pages, components)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,25 +12,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase client credentials');
 }
 
-export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // For server-side operations (API routes)
-export const supabaseAdmin = (() => {
-  // Only initialize admin client on the server side
-  if (typeof window === 'undefined') {
-    const supabaseAdminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error('Missing Supabase env vars (SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL)');
+}
 
-    if (!supabaseAdminUrl || !supabaseServiceRoleKey) {
-      console.error('Missing Supabase admin credentials:', {
-        url: !!supabaseAdminUrl,
-        serviceKey: !!supabaseServiceRoleKey
-      });
-      throw new Error('Missing Supabase admin credentials');
+export const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
     }
-
-    return createSupabaseClient(supabaseAdminUrl, supabaseServiceRoleKey);
   }
-  // Return null for client-side
-  return null;
-})(); 
+); 

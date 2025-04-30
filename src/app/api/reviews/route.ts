@@ -111,14 +111,9 @@ export async function POST(req: Request) {
       console.log("Sample review data:", rows[0]);
       console.log("Sample sentiment:", rows[0]?.sentiment);
 
-      // Verify Supabase admin client
-      if (!supabaseAdmin) {
-        throw new Error("Supabase admin client not initialized");
-      }
-
       // Insert the reviews and only select the fields we need
       console.log("Attempting to insert reviews into Supabase...");
-      const { data: insertedData, error } = await supabaseAdmin
+      const { data: insertedData, error: supabaseError } = await supabaseAdmin
         .from("reviews")
         .insert(rows)
         .select(`
@@ -132,18 +127,36 @@ export async function POST(req: Request) {
           created_at
         `);
 
-      if (error) {
+      if (supabaseError) {
         console.error("Supabase insert error:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
+          message: supabaseError.message,
+          details: supabaseError.details,
+          hint: supabaseError.hint,
+          code: supabaseError.code
         });
+        
+        // Check for specific Supabase errors
+        if (supabaseError.code === '23505') {
+          return NextResponse.json({ 
+            error: "Reviews already exist",
+            details: "These reviews have already been saved",
+            code: supabaseError.code
+          }, { status: 409 });
+        }
+        
+        if (supabaseError.code === '42501') {
+          return NextResponse.json({ 
+            error: "Permission denied",
+            details: "The service role key might not have the required permissions",
+            code: supabaseError.code
+          }, { status: 403 });
+        }
+
         return NextResponse.json({ 
           error: "Failed to insert reviews",
-          details: error.message,
-          code: error.code,
-          sampleData: rows[0]
+          details: supabaseError.message,
+          code: supabaseError.code,
+          hint: supabaseError.hint
         }, { status: 500 });
       }
 
