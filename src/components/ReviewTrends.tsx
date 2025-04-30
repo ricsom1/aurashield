@@ -140,7 +140,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
       <div className="bg-white shadow-sm rounded-lg p-6">
         <div className="flex items-center space-x-2 mb-4">
           <span className="text-2xl">🧠</span>
-          <h3 className="text-lg font-medium text-gray-900">This Week's Insights</h3>
+          <h3 className="text-lg font-medium text-gray-900">This Week&apos;s Insights</h3>
         </div>
         <p className="text-gray-600">{summary}</p>
       </div>
