@@ -24,51 +24,65 @@ async function getRedditAccessToken(): Promise<string> {
   const username = process.env.REDDIT_USERNAME;
   const password = process.env.REDDIT_PASSWORD;
 
+  // Log credential presence (without values)
+  console.log("🔐 Checking Reddit credentials:", {
+    clientId: clientId ? "✅ present" : "❌ missing",
+    clientSecret: clientSecret ? "✅ present" : "❌ missing",
+    username: username ? "✅ present" : "❌ missing",
+    password: password ? "✅ present" : "❌ missing"
+  });
+
   if (!clientId || !clientSecret || !username || !password) {
-    console.error("Missing Reddit credentials:", {
-      clientId: !!clientId,
-      clientSecret: !!clientSecret,
-      username: !!username,
-      password: !!password
-    });
     throw new Error("Missing Reddit credentials");
   }
 
+  // Construct Basic Auth header
   const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  console.log("🔐 Attempting Reddit authentication with Basic Auth");
+  console.log("🔐 Basic Auth header constructed");
 
+  // Prepare request body
   const body = new URLSearchParams({
     grant_type: 'password',
     username: username,
     password: password,
   });
 
-  const tokenRes = await fetch('https://www.reddit.com/api/v1/access_token', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${basicAuth}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'menuIQ/1.0 by Ok_Willingness_2450'
-    },
-    body: body.toString(),
-  });
+  console.log("🔐 Making token request to Reddit...");
 
-  if (!tokenRes.ok) {
-    const error = await tokenRes.text();
-    console.error("❌ Reddit token error:", {
-      status: tokenRes.status,
-      statusText: tokenRes.statusText,
-      error
+  try {
+    const tokenRes = await fetch('https://www.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'menuIQ/1.0 by Ok_Willingness_2450'
+      },
+      body: body.toString(),
     });
-    throw new Error(`Failed to get Reddit access token: ${tokenRes.status} ${error}`);
-  }
 
-  const json = await tokenRes.json();
-  console.log("✅ Reddit Token Success:", {
-    tokenType: json.token_type,
-    expiresIn: json.expires_in
-  });
-  return json.access_token;
+    console.log("🔐 Token response status:", tokenRes.status);
+
+    if (!tokenRes.ok) {
+      const error = await tokenRes.text();
+      console.error("❌ Reddit token error:", {
+        status: tokenRes.status,
+        statusText: tokenRes.statusText,
+        error,
+        headers: Object.fromEntries(tokenRes.headers.entries())
+      });
+      throw new Error(`Failed to get Reddit access token: ${tokenRes.status} ${error}`);
+    }
+
+    const json = await tokenRes.json();
+    console.log("✅ Reddit Token Success:", {
+      tokenType: json.token_type,
+      expiresIn: json.expires_in
+    });
+    return json.access_token;
+  } catch (error) {
+    console.error("❌ Token request failed:", error);
+    throw error;
+  }
 }
 
 async function fetchRedditPosts(restaurantName: string) {
