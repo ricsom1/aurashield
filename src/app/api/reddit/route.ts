@@ -19,32 +19,56 @@ interface RedditResponse {
 
 // Reddit API requires OAuth2 authentication
 async function getRedditAccessToken() {
-  // These should be environment variables in production
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  try {
+    // These should be environment variables in production
+    const clientId = process.env.REDDIT_CLIENT_ID;
+    const clientSecret = process.env.REDDIT_CLIENT_SECRET;
 
-  if (!clientId || !clientSecret) {
-    throw new Error('Reddit API credentials not configured');
+    if (!clientId || !clientSecret) {
+      console.error('Missing Reddit credentials:', { clientId: !!clientId, clientSecret: !!clientSecret });
+      throw new Error('Reddit API credentials not configured');
+    }
+
+    console.log('Attempting to get Reddit access token...');
+    
+    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    
+    const response = await fetch('https://ssl.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'MenuIQ/1.0 (by /u/menuiq)'
+      },
+      body: 'grant_type=client_credentials'
+    });
+
+    console.log('Token response status:', response.status);
+
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error('Failed to get access token:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: responseText
+      });
+      throw new Error(`Failed to get Reddit access token: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.access_token) {
+      console.error('Invalid token response:', data);
+      throw new Error('Invalid token response from Reddit');
+    }
+
+    console.log('Successfully obtained access token');
+    return data.access_token;
+  } catch (error) {
+    console.error('Error in getRedditAccessToken:', error);
+    throw error;
   }
-
-  const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-  
-  const response = await fetch('https://www.reddit.com/api/v1/access_token', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${authString}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'MenuIQ/1.0 (by /u/menuiq)'
-    },
-    body: 'grant_type=client_credentials'
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to get Reddit access token: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
 }
 
 async function fetchRedditPosts(restaurantName: string) {
@@ -62,10 +86,12 @@ async function fetchRedditPosts(restaurantName: string) {
 
     // Clean and encode the restaurant name
     const cleanedName = restaurantName.trim();
-    const searchQuery = encodeURIComponent(`"${cleanedName}"`);
+    // Remove quotes if they exist and then add them back after encoding
+    const nameWithoutQuotes = cleanedName.replace(/['"]/g, '');
+    const searchQuery = encodeURIComponent(nameWithoutQuotes);
     
-    // Construct URL
-    const url = `https://oauth.reddit.com/search?q=${searchQuery}&limit=10&sort=relevance&t=all`;
+    // Construct URL - use double quotes for exact match
+    const url = `https://oauth.reddit.com/search?q="${searchQuery}"&limit=10&sort=relevance&t=all`;
     console.log('Making request to:', url);
 
     // Make the request with OAuth token
@@ -93,6 +119,13 @@ async function fetchRedditPosts(restaurantName: string) {
 
     // Handle non-200 responses
     if (!response.ok) {
+      const responseText = await response.text();
+      console.error('Reddit API error response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: responseText
+      });
       throw new Error(`Reddit API returned ${response.status}: ${response.statusText}`);
     }
 
@@ -104,6 +137,8 @@ async function fetchRedditPosts(restaurantName: string) {
       console.error('Invalid Reddit API response structure:', data);
       throw new Error('Invalid response structure from Reddit API');
     }
+
+    console.log('Successfully fetched Reddit posts:', data.data.children.length);
 
     // Transform and return the posts
     return data.data.children.map((post: RedditPost) => ({
