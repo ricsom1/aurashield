@@ -1,15 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import TestReviews from "@/components/TestReviews";
 import ReviewTrends from "@/components/ReviewTrends";
 
 type SentimentFilter = "all" | "positive" | "neutral" | "negative";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState<SentimentFilter>("all");
   const [selectedPlace, setSelectedPlace] = useState<{ place_id: string } | null>(null);
   const filters: SentimentFilter[] = ["all", "positive", "neutral", "negative"];
+
+  useEffect(() => {
+    console.log("Dashboard: Checking for selected place...");
+    const savedPlace = localStorage.getItem("selectedPlace");
+    if (!savedPlace) {
+      console.log("Dashboard: No place selected, redirecting to search");
+      router.push("/search");
+    }
+  }, [router]);
 
   useEffect(() => {
     const savedPlace = localStorage.getItem("selectedPlace");
