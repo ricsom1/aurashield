@@ -8,11 +8,11 @@ export async function classifySentiment(text: string): Promise<Sentiment> {
   const positiveWords = ['great', 'good', 'excellent', 'amazing', 'love', 'best', 'fantastic', 'wonderful', 'awesome'];
   const negativeWords = ['bad', 'poor', 'terrible', 'awful', 'horrible', 'worst', 'disappointed', 'disappointing'];
   
-  let positiveScore = positiveWords.reduce((score, word) => 
+  const positiveScore = positiveWords.reduce((score, word) => 
     score + (lowerText.includes(word) ? 1 : 0), 0
   );
   
-  let negativeScore = negativeWords.reduce((score, word) => 
+  const negativeScore = negativeWords.reduce((score, word) => 
     score + (lowerText.includes(word) ? 1 : 0), 0
   );
   

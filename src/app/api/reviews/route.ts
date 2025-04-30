@@ -7,6 +7,13 @@ if (!process.env.GOOGLE_PLACES_API_KEY) {
   throw new Error("Missing GOOGLE_PLACES_API_KEY environment variable");
 }
 
+interface GoogleReview {
+  author_name?: string;
+  rating?: number;
+  text?: string;
+  time?: number;
+}
+
 export async function POST(req: Request) {
   try {
     const { placeId } = await req.json();
@@ -38,7 +45,7 @@ export async function POST(req: Request) {
 
     // Classify each review before saving
     const rows = await Promise.all(
-      reviews.map(async (r: any) => {
+      reviews.map(async (r: GoogleReview) => {
         const sentiment = await classifySentiment(r.text || "") || "neutral";
         // Convert Unix timestamp to ISO date string
         const timestamp = r.time 

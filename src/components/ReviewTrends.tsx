@@ -177,7 +177,7 @@ export default function ReviewTrends({ placeId }: ReviewTrendsProps) {
                   </span>
                 </div>
                 <div className="mt-2 text-sm text-gray-500">
-                  Mentioned {keyword.count} {keyword.count === 1 ? "time" : "times"}
+                  Mentioned {keyword.count} {keyword.count === 1 ? 'time' : 'times'}
                 </div>
               </div>
             ))}
