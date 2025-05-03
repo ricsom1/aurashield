@@ -25,12 +25,16 @@ export async function GET(req: Request) {
 
     if (error) throw error;
 
+    // Add type assertions for TypeScript
+    const typedMentions = mentions as Array<{ [key: string]: any }>;
+
     // Get competitor mentions
     const { data: competitorMentions } = await supabaseAdmin
       .from("mentions")
       .select("*")
       .eq("is_competitor", true)
       .gte("created_at", sevenDaysAgo.toISOString());
+    const typedCompetitorMentions = competitorMentions as Array<{ [key: string]: any }>;
 
     // Create PDF document
     const pdfDoc = await PDFDocument.create();
@@ -62,17 +66,17 @@ export async function GET(req: Request) {
 
     // Add statistics
     const stats = {
-      totalMentions: mentions.length,
-      crisisCount: mentions.filter((m) => m.is_crisis).length,
-      byPlatform: mentions.reduce((acc, m) => {
+      totalMentions: typedMentions.length,
+      crisisCount: typedMentions.filter((m) => m.is_crisis).length,
+      byPlatform: typedMentions.reduce((acc, m) => {
         acc[m.platform] = (acc[m.platform] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
-      sentiment: mentions.reduce((acc, m) => {
+      sentiment: typedMentions.reduce((acc, m) => {
         acc[m.sentiment] = (acc[m.sentiment] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
-      competitorStats: competitorMentions?.reduce((acc, m) => {
+      competitorStats: typedCompetitorMentions?.reduce((acc, m) => {
         if (!acc[m.creator_handle]) {
           acc[m.creator_handle] = {
             total: 0,
@@ -88,7 +92,7 @@ export async function GET(req: Request) {
     };
 
     // Twitter-specific analytics
-    const twitterMentions = mentions.filter((m) => m.platform === 'twitter');
+    const twitterMentions = typedMentions.filter((m) => m.platform === 'twitter');
     const twitterTotal = twitterMentions.length;
     const twitterCrisis = twitterMentions.filter((m) => m.is_crisis).length;
     const twitterCrisisRate = twitterTotal > 0 ? (twitterCrisis / twitterTotal) * 100 : 0;
@@ -101,7 +105,7 @@ export async function GET(req: Request) {
       .sort((a, b) => (b.engagement || 0) - (a.engagement || 0) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 5);
     // Twitter competitor breakdown
-    const twitterCompetitorStats = competitorMentions?.filter((m) => m.platform === 'twitter')?.reduce((acc, m) => {
+    const twitterCompetitorStats = typedCompetitorMentions?.filter((m) => m.platform === 'twitter')?.reduce((acc, m) => {
       if (!acc[m.creator_handle]) {
         acc[m.creator_handle] = {
           total: 0,
