@@ -23,27 +23,23 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       const supabase = getSupabaseClient();
-      // Check for hash fragment tokens (mobile flow)
-      if (typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('access_token')) {
+      // Mobile: tokens in hash
+      if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
         const { access_token, refresh_token } = parseHashParams(window.location.hash);
         if (access_token && refresh_token) {
-          await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-          router.push('/dashboard');
+          const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+          // Clean up the URL
+          window.location.hash = '';
+          if (!error) {
+            router.replace('/dashboard');
+          } else {
+            router.replace('/login?error=auth');
+          }
           return;
         }
       }
-      // Fallback: try to get session (desktop/normal flow)
-      try {
-        const { error } = await supabase.auth.getSession();
-        if (error) throw error;
-        router.push('/dashboard');
-      } catch (error) {
-        console.error('Error in auth callback:', error);
-        router.push('/');
-      }
+      // Desktop: session should already be set
+      router.replace('/dashboard');
     };
 
     handleAuthCallback();
