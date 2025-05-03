@@ -65,7 +65,7 @@ export async function GET(req: Request) {
       totalMentions: mentions.length,
       crisisCount: mentions.filter((m) => m.is_crisis).length,
       byPlatform: mentions.reduce((acc, m) => {
-        acc[m.source] = (acc[m.source] || 0) + 1;
+        acc[m.platform] = (acc[m.platform] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
       sentiment: mentions.reduce((acc, m) => {
