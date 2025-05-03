@@ -20,24 +20,37 @@ import {
 } from "recharts";
 import TwitterMentions from "@/components/TwitterMentions";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
+import Link from "next/link";
+import TwitterAnalytics from "@/components/TwitterAnalytics";
+import MentionsList from "@/components/MentionsList";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Mention {
   id: string;
-  user_id: string;
-  platform: string;
-  handle: string;
   text: string;
+  source: string;
+  created_at: string;
   sentiment: string;
   is_crisis: boolean;
-  created_at: string;
-  updated_at: string;
+  url: string;
+  creator_handle: string;
+  matched_keyword: string;
 }
 
-interface Stats {
+interface DashboardStats {
   totalMentions: number;
   crisisMentions: number;
   sentimentTrend: { date: string; sentiment: number }[];
   recentMentions: Mention[];
+}
+
+interface TwitterStats {
+  total: number;
+  crisis: number;
+  crisisRate: number;
+  sentimentCounts: { positive: number; neutral: number; negative: number };
 }
 
 // Helper function to parse sentiment text to number
@@ -45,8 +58,6 @@ function parseSentiment(sentiment: string): number {
   switch (sentiment.toLowerCase()) {
     case 'positive':
       return 1;
-    case 'neutral':
-      return 0;
     case 'negative':
       return -1;
     default:
@@ -56,10 +67,12 @@ function parseSentiment(sentiment: string): number {
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [twitterStats, setTwitterStats] = useState<TwitterStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [twitterStats, setTwitterStats] = useState<any>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const FETCH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
   useEffect(() => {
     if (!user) {
@@ -69,44 +82,50 @@ export default function Dashboard() {
 
     async function fetchDashboardData() {
       try {
-        const supabase = getSupabaseClient();
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        setLoading(true);
+        setError(null);
 
-        // All mentions
+        const supabase = getSupabaseClient();
+        
+        // Fetch mentions with proper typing
         const { data: mentions, error: mentionsError } = await supabase
           .from("mentions")
           .select("*")
-          .eq('user_id', user.id)
-          .gte("created_at", sevenDaysAgo.toISOString())
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(100);
 
-        if (mentionsError) throw new Error(mentionsError.message);
-        if (!mentions) throw new Error("No mentions data received");
+        if (mentionsError) throw mentionsError;
 
-        const typedMentions = mentions.map(m => ({
-          id: m.id,
-          user_id: m.user_id,
-          platform: m.platform,
-          handle: m.handle,
-          text: m.text,
-          sentiment: m.sentiment,
-          is_crisis: m.is_crisis,
-          created_at: m.created_at,
-          updated_at: m.updated_at
-        })) as Mention[];
+        const typedMentions = mentions?.map((m) => ({
+          id: m.id as string,
+          text: m.text as string,
+          source: m.source as string,
+          created_at: m.created_at as string,
+          sentiment: m.sentiment as string,
+          is_crisis: m.is_crisis as boolean,
+          url: m.url as string,
+          creator_handle: m.creator_handle as string,
+          matched_keyword: m.matched_keyword as string,
+        })) || [];
 
-        // Twitter-specific analytics
-        const twitterMentions = typedMentions.filter(m => m.platform === 'twitter');
+        // Calculate Twitter-specific stats
+        const twitterMentions = typedMentions.filter(m => m.source === 'twitter');
         const twitterTotal = twitterMentions.length;
         const twitterCrisis = twitterMentions.filter(m => m.is_crisis).length;
         const twitterCrisisRate = twitterTotal > 0 ? (twitterCrisis / twitterTotal) * 100 : 0;
-        const sentimentCounts = { positive: 0, neutral: 0, negative: 0 };
+        
+        const sentimentCounts = {
+          positive: 0,
+          neutral: 0,
+          negative: 0
+        };
+
         twitterMentions.forEach(m => {
           if (m.sentiment === 'positive') sentimentCounts.positive++;
           else if (m.sentiment === 'neutral') sentimentCounts.neutral++;
           else if (m.sentiment === 'negative') sentimentCounts.negative++;
         });
+
         setTwitterStats({
           total: twitterTotal,
           crisis: twitterCrisis,
@@ -114,6 +133,7 @@ export default function Dashboard() {
           sentimentCounts,
         });
 
+        // Calculate overall stats
         const totalMentions = typedMentions.length;
         const crisisMentions = typedMentions.filter((m) => m.is_crisis).length;
 
@@ -142,17 +162,30 @@ export default function Dashboard() {
           sentimentTrend,
           recentMentions: typedMentions.slice(0, 5),
         });
+
+        setLastFetchTime(Date.now());
         setError(null);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        setError(err instanceof Error ? err.message : 'An error occurred while fetching data');
       } finally {
         setLoading(false);
       }
     }
 
+    // Initial fetch
     fetchDashboardData();
-  }, [user]);
+
+    // Set up interval for periodic updates
+    const interval = setInterval(() => {
+      const timeSinceLastFetch = Date.now() - lastFetchTime;
+      if (timeSinceLastFetch >= FETCH_INTERVAL) {
+        fetchDashboardData();
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [user, lastFetchTime]);
 
   if (authLoading) {
     return (
@@ -163,187 +196,47 @@ export default function Dashboard() {
   }
 
   if (!user) {
-    return <SignIn />;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Please sign in to view your dashboard</h1>
+          <Link href="/login" className="text-blue-600 hover:text-blue-800">
+            Sign in
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && !stats) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-red-50 p-4 rounded-md">
-            <h3 className="text-sm font-medium text-red-800">Error loading dashboard</h3>
-            <div className="mt-2 text-sm text-red-700">
-              <p>{error}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!stats) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-yellow-50 p-4 rounded-md">
-            <h3 className="text-sm font-medium text-yellow-800">No data available</h3>
-            <div className="mt-2 text-sm text-yellow-700">
-              <p>No mentions data is currently available.</p>
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardHeader />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">Dashboard</h1>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <OnboardingChecklist />
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900">Total Mentions</h3>
-            <p className="mt-2 text-3xl font-bold text-blue-600">{stats.totalMentions}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900">Crisis Mentions</h3>
-            <p className="mt-2 text-3xl font-bold text-red-600">{stats.crisisMentions}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900">Crisis Rate</h3>
-            <p className="mt-2 text-3xl font-bold text-orange-600">
-              {((stats.crisisMentions / stats.totalMentions) * 100).toFixed(1)}%
-            </p>
-          </div>
+        <div className="grid grid-cols-1 gap-6">
+          <DashboardHeader stats={stats} />
+          <TwitterAnalytics stats={twitterStats} />
+          <MentionsList mentions={stats?.recentMentions || []} />
         </div>
-
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Sentiment Trend</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.sentimentTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis domain={[-1, 1]} ticks={[-1, -0.5, 0, 0.5, 1]} />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="sentiment"
-                  stroke="#8884d8"
-                  activeDot={{ r: 8 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Mentions</h3>
-          <div className="space-y-4">
-            {stats.recentMentions.map((mention) => (
-              <div
-                key={mention.id}
-                className={`p-4 rounded-lg ${
-                  mention.is_crisis ? "bg-red-50" : "bg-gray-50"
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-gray-500">
-                      @{mention.handle} • {new Date(mention.created_at).toLocaleString()}
-                    </p>
-                    <p className="mt-1 text-sm text-gray-900">{mention.text}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      mention.sentiment === "positive"
-                        ? "bg-green-100 text-green-800"
-                        : mention.sentiment === "negative"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    {mention.sentiment}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow mt-8">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Twitter Mentions</h3>
-          <TwitterMentions />
-        </div>
-
-        {/* Twitter Analytics Section */}
-        {twitterStats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900">Twitter Mentions</h3>
-              <p className="mt-2 text-3xl font-bold text-blue-600">{twitterStats.total}</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900">Crisis Mentions</h3>
-              <p className="mt-2 text-3xl font-bold text-red-600">{twitterStats.crisis}</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900">Crisis Rate</h3>
-              <p className="mt-2 text-3xl font-bold text-orange-600">{twitterStats.crisisRate.toFixed(1)}%</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow col-span-1 md:col-span-3 flex flex-col items-center">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Twitter Sentiment Breakdown</h3>
-              <PieChart width={320} height={200}>
-                <Pie
-                  data={[
-                    { name: 'Positive', value: twitterStats.sentimentCounts.positive },
-                    { name: 'Neutral', value: twitterStats.sentimentCounts.neutral },
-                    { name: 'Negative', value: twitterStats.sentimentCounts.negative },
-                  ]}
-                  cx={160}
-                  cy={100}
-                  innerRadius={40}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  paddingAngle={5}
-                  dataKey="value"
-                  label
-                >
-                  <Cell key="positive" fill="#22c55e" />
-                  <Cell key="neutral" fill="#a3a3a3" />
-                  <Cell key="negative" fill="#ef4444" />
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </div>
-          </div>
-        )}
-      </main>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase";
 import DashboardHeader from "@/components/DashboardHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ShieldCheck } from "lucide-react";
 
 interface CrisisMention {
   id: string;
@@ -86,41 +90,36 @@ export default function CrisisCenter() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <ShieldCheck className="w-10 h-10 text-blue-500 animate-bounce-slow mr-3" />
+        <span className="text-xl font-semibold text-gray-700">Loading Crisis Center...</span>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Crisis Center</h1>
-          <button
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <ShieldCheck className="w-7 h-7 text-blue-500" /> Crisis Center
+          </h1>
+          <Button
             onClick={generatePlaybook}
             disabled={generating}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+            variant="destructive"
+            className="px-6 py-2 text-lg font-semibold shadow-md"
           >
             {generating ? "Generating..." : "Generate Response Plan"}
-          </button>
+          </Button>
         </div>
 
         {/* Crisis Mentions */}
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Active Crisis Alerts</h2>
-          <div className="space-y-4">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Active Crisis Alerts</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             {crisisMentions.map((mention) => (
               <div key={mention.id} className="p-4 bg-red-50 rounded-lg">
                 <div className="flex justify-between items-start">
@@ -145,14 +144,16 @@ export default function CrisisCenter() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Playbook */}
         {playbook && (
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">AI-Generated Response Plan</h2>
-            <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI-Generated Response Plan</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div>
                 <h3 className="text-md font-medium text-gray-900 mb-2">Severity Assessment</h3>
                 <p className="text-gray-600">{playbook.severity}</p>
@@ -193,8 +194,8 @@ export default function CrisisCenter() {
                   ))}
                 </ul>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
       </main>
     </div>

@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import AppLayout from "@/components/AppLayout";
 
 export const metadata: Metadata = {
   title: "AuraShield Dashboard",
@@ -10,5 +11,5 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <AppLayout>{children}</AppLayout>;
 } 

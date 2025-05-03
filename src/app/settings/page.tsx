@@ -1,13 +1,14 @@
+'use client';
 import { Metadata } from "next";
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import toast from "react-hot-toast";
-
-export const metadata: Metadata = {
-  title: "Settings - AuraShield",
-  description: "Configure your AuraShield dashboard settings.",
-};
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ export default function SettingsPage() {
   const [newEntity, setNewEntity] = useState<{ type: string; value: string }>({ type: "keyword", value: "" });
   const [alertsEnabled, setAlertsEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchSettings() {
@@ -93,92 +95,91 @@ export default function SettingsPage() {
   }
 
   if (loading) return <div className="min-h-screen bg-gray-50 py-8">Loading...</div>;
+  if (error) return (
+    <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+      <Alert variant="destructive">
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-semibold text-gray-900 mb-8">Settings</h1>
-        <div className="bg-white shadow-sm rounded-lg divide-y divide-gray-200">
+        <Card className="shadow-sm divide-y divide-gray-200">
           {/* Twitter Handle */}
-          <div className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Twitter Handle</h2>
+          <CardHeader>
+            <CardTitle>Twitter Handle</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
             <div className="flex items-center space-x-4">
-              <input
+              <Input
                 type="text"
                 value={twitterHandle}
                 onChange={(e) => setTwitterHandle(e.target.value)}
-                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                 placeholder="@yourhandle"
+                className="w-full"
               />
-              <button
-                onClick={saveTwitterHandle}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
+              <Button onClick={saveTwitterHandle} variant="default">
                 Save
-              </button>
+              </Button>
             </div>
-          </div>
+          </CardContent>
 
           {/* Tracked Entities */}
-          <div className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Competitors & Crisis Keywords</h2>
+          <CardHeader>
+            <CardTitle>Competitors & Crisis Keywords</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
             <div className="flex space-x-2 mb-4">
               <select
                 value={newEntity.type}
                 onChange={(e) => setNewEntity((ne) => ({ ...ne, type: e.target.value }))}
-                className="border-gray-300 rounded-md"
+                className="border-gray-300 rounded-md px-2 py-1"
               >
                 <option value="keyword">Keyword</option>
                 <option value="reddit">Competitor (Reddit)</option>
               </select>
-              <input
+              <Input
                 type="text"
                 value={newEntity.value}
                 onChange={(e) => setNewEntity((ne) => ({ ...ne, value: e.target.value }))}
-                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
                 placeholder="Add keyword or competitor"
+                className="w-full"
               />
-              <button
-                onClick={addEntity}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
+              <Button onClick={addEntity} variant="default">
                 Add
-              </button>
+              </Button>
             </div>
             <ul className="space-y-2">
               {entities.map((entity) => (
                 <li key={entity.id} className="flex items-center justify-between bg-gray-100 px-3 py-2 rounded">
                   <span>{entity.type}: {entity.value}</span>
-                  <button
-                    onClick={() => removeEntity(entity.id!)}
-                    className="text-red-600 hover:underline"
-                  >
+                  <Button onClick={() => removeEntity(entity.id!)} variant="destructive" size="sm">
                     Remove
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
-          </div>
+          </CardContent>
 
           {/* Alerts Toggle */}
-          <div className="p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Alerts</h2>
+          <CardHeader>
+            <CardTitle>Alerts</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <span>Email & Crisis Alerts</span>
-              <button
-                type="button"
-                onClick={() => { setAlertsEnabled((v) => !v); setTimeout(saveAlertsSetting, 100); }}
-                className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${alertsEnabled ? "bg-blue-600" : "bg-gray-200"}`}
-                role="switch"
+              <Switch
+                checked={alertsEnabled}
+                onCheckedChange={(v) => { setAlertsEnabled(v); setTimeout(saveAlertsSetting, 100); }}
                 aria-checked={alertsEnabled}
-              >
-                <span
-                  className={`$${alertsEnabled ? "translate-x-5" : "translate-x-0"} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}
-                />
-              </button>
+              />
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

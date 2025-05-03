@@ -10,21 +10,13 @@ export function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  console.log('Supabase client initialization:', {
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey?.substring(0, 10) + '...',
-    environment: process.env.NODE_ENV,
-    isClient: typeof window !== 'undefined',
-    hasWindow: typeof window !== 'undefined',
-    windowLocation: typeof window !== 'undefined' ? window.location.href : 'no window',
-    timestamp: new Date().toISOString()
-  });
-
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(`Missing Supabase client credentials:
-      URL: ${supabaseUrl ? 'present' : 'missing'}
-      Anon Key: ${supabaseAnonKey ? 'present' : 'missing'}
-    `);
+    console.error('Missing Supabase client credentials:', {
+      url: supabaseUrl ? 'present' : 'missing',
+      anonKey: supabaseAnonKey ? 'present' : 'missing',
+      environment: process.env.NODE_ENV
+    });
+    throw new Error('Missing Supabase client credentials');
   }
 
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -32,6 +24,11 @@ export function getSupabaseClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'aurashield-web'
+      }
     }
   });
 
@@ -49,18 +46,22 @@ export function getSupabaseAdmin() {
     console.error('Missing Supabase admin credentials:', {
       hasUrl: !!supabaseUrl,
       hasServiceKey: !!serviceRoleKey,
-      serviceKeyLength: serviceRoleKey?.length || 0,
-      environment: process.env.NODE_ENV,
-      isServer: typeof window === 'undefined'
+      environment: process.env.NODE_ENV
     });
-    throw new Error('Missing Supabase env vars (SUPABASE_SERVICE_ROLE_KEY or URL)');
+    throw new Error('Missing Supabase admin credentials');
   }
 
   supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'aurashield-server'
+      }
     }
   });
+
   return supabaseAdmin;
 } 
