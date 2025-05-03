@@ -30,14 +30,14 @@ export async function POST(req: Request) {
       )
       .join("\n");
 
-    const prompt = `Analyze these Reddit posts about a restaurant and provide a concise summary of the overall sentiment and key points being discussed. Focus on common themes, notable praise or criticism, and any unique insights that would be valuable for the restaurant owner.\n\nPosts:\n${postsText}`;
+    const prompt = `Analyze these Reddit posts about a creator and provide a concise summary of the overall sentiment and key points being discussed. Focus on common themes, notable praise or criticism, and any unique insights that would be valuable for the creator.\n\nPosts:\n${postsText}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: "You are a helpful restaurant social media analyst. Provide concise, actionable insights from Reddit discussions.",
+          content: "You are a helpful social media analyst. Provide concise, actionable insights from Reddit discussions about creators and their content.",
         },
         { role: "user", content: prompt },
       ],

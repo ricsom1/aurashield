@@ -5,32 +5,20 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
-interface Review {
+interface Mention {
   text: string;
   sentiment: string;
   created_at: string;
-  place_id: string;
+  creator_handle: string;
+  source: string;
 }
 
-interface Keyword {
-  word: string;
-  count: number;
-  sentiment: "positive" | "negative" | "neutral";
-  place_id: string;
-}
-
-interface SupabaseReview {
+interface SupabaseMention {
   text: string;
   sentiment: string;
   created_at: string;
-  place_id: string;
-}
-
-interface SupabaseKeyword {
-  word: string;
-  count: number;
-  sentiment: "positive" | "negative" | "neutral";
-  place_id: string;
+  creator_handle: string;
+  source: string;
 }
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -60,44 +48,24 @@ export function clearCache(key?: string) {
   }
 }
 
-export async function getCachedReviews(placeId: string): Promise<Review[]> {
-  const key = `reviews:${placeId}`;
-  return getCachedData<Review[]>(key, async () => {
+export async function getCachedMentions(creatorHandle: string): Promise<Mention[]> {
+  const key = `mentions:${creatorHandle}`;
+  return getCachedData<Mention[]>(key, async () => {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
-      .from("reviews")
-      .select("text, sentiment, created_at, place_id")
-      .eq("place_id", placeId)
+      .from("mentions")
+      .select("text, sentiment, created_at, creator_handle, source")
+      .eq("creator_handle", creatorHandle)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
     if (!data) return [];
-    return (data as SupabaseReview[]).map(review => ({
-      text: review.text,
-      sentiment: review.sentiment,
-      created_at: review.created_at,
-      place_id: review.place_id
-    }));
-  });
-}
-
-export async function getCachedKeywords(placeId: string): Promise<Keyword[]> {
-  const key = `keywords:${placeId}`;
-  return getCachedData<Keyword[]>(key, async () => {
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase
-      .from("keywords")
-      .select("word, count, sentiment, place_id")
-      .eq("place_id", placeId)
-      .order("count", { ascending: false });
-
-    if (error) throw error;
-    if (!data) return [];
-    return (data as SupabaseKeyword[]).map(keyword => ({
-      word: keyword.word,
-      count: keyword.count,
-      sentiment: keyword.sentiment,
-      place_id: keyword.place_id
+    return (data as SupabaseMention[]).map(mention => ({
+      text: mention.text,
+      sentiment: mention.sentiment,
+      created_at: mention.created_at,
+      creator_handle: mention.creator_handle,
+      source: mention.source
     }));
   });
 } 

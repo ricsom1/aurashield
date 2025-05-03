@@ -37,13 +37,13 @@ export default function RedditContent() {
     }
   }, []);
 
-  async function fetchRedditPosts(restaurantName: string) {
+  async function fetchRedditPosts(creatorHandle: string) {
     try {
       setIsLoading(true);
       setError(null);
       setSummary("");
 
-      const response = await fetch(`/api/reddit?restaurantName=${encodeURIComponent(restaurantName)}`);
+      const response = await fetch(`/api/reddit?creatorHandle=${encodeURIComponent(creatorHandle)}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch Reddit posts: ${response.status}`);
@@ -98,13 +98,13 @@ export default function RedditContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">No Restaurant Selected</h2>
-          <p className="text-gray-600 mb-6">Please select a restaurant to view Reddit mentions.</p>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">No Creator Handle Connected</h2>
+          <p className="text-gray-600 mb-6">Please connect your creator handle to view Reddit mentions.</p>
           <button
             onClick={() => router.push("/search")}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            Select Restaurant
+            Connect Handle
           </button>
         </div>
       </div>
@@ -183,7 +183,7 @@ export default function RedditContent() {
           </div>
         ) : posts.length === 0 || posts[0].isFallback ? (
           <div className="bg-white shadow-sm rounded-lg p-6 text-center">
-            <p className="text-gray-500">{posts[0]?.message || "No Reddit discussions found about this restaurant yet. Check back soon!"}</p>
+            <p className="text-gray-500">{posts[0]?.message || "No Reddit discussions found about this creator yet. Check back soon!"}</p>
           </div>
         ) : (
           /* Reddit Posts List */

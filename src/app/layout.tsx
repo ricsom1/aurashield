@@ -1,25 +1,26 @@
-import AppProviders from "@/components/AppProviders";
-import Header from "@/components/Header";
+import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
-  title: 'AuraShield',
-  description: 'Reputation Intelligence for Creators',
-}
+export const metadata: Metadata = {
+  title: "AuraShield",
+  description: "Creator-focused reputation management platform",
+};
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en" className={inter.className}>
-      <body className="bg-gray-50 text-gray-900 antialiased">
-        <AppProviders>
-          <Header />
-          <main className="min-h-screen">
-            {children}
-          </main>
-        </AppProviders>
+    <html lang="en">
+      <body className={inter.className}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -7,15 +7,34 @@ let supabaseAdmin: ReturnType<typeof createClient>;
 export function getSupabaseClient() {
   if (supabase) return supabase;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  console.log('Supabase client initialization:', {
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey?.substring(0, 10) + '...',
+    environment: process.env.NODE_ENV,
+    isClient: typeof window !== 'undefined',
+    hasWindow: typeof window !== 'undefined',
+    windowLocation: typeof window !== 'undefined' ? window.location.href : 'no window',
+    timestamp: new Date().toISOString()
+  });
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase client credentials');
-    throw new Error('Missing Supabase client credentials');
+    throw new Error(`Missing Supabase client credentials:
+      URL: ${supabaseUrl ? 'present' : 'missing'}
+      Anon Key: ${supabaseAnonKey ? 'present' : 'missing'}
+    `);
   }
 
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
+
   return supabase;
 }
 

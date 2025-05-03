@@ -1,50 +1,45 @@
 # AuraShield
 
-AuraShield – Reputation Intelligence for Creators
-
-Modern reputation monitoring and analysis platform that helps creators and businesses understand and improve their online presence.
+AuraShield is a powerful reputation monitoring platform designed for creators, founders, and public figures. It helps you track, analyze, and protect your online presence across social media and the web.
 
 ## Features
 
-- Google Places API integration for restaurant data and reviews
-- Real-time sentiment analysis of reviews
-- Trend analysis and keyword extraction
-- Modern, responsive UI built with Next.js and Tailwind CSS
-- Secure authentication with NextAuth.js
-- Data persistence with Supabase
+- Real-time social media monitoring
+- Sentiment analysis of mentions and comments
+- Trend detection and alerts
+- Crisis early warning system
+- Comprehensive analytics dashboard
+- Reddit discussions tracking
+- AI-powered insights and recommendations
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15.3, React 19, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: Supabase
-- **Authentication**: NextAuth.js
-- **APIs**: Google Places API, OpenAI API
-- **Deployment**: Vercel
+- Next.js 13+ with App Router
+- TypeScript for type safety
+- Tailwind CSS for styling
+- OpenAI API for sentiment analysis and insights
+- Reddit API for social monitoring
+- Supabase for data storage and real-time updates
 
 ## Getting Started
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Set up environment variables in `.env.local`
+3. Set up environment variables:
+   ```
+   OPENAI_API_KEY=your_key
+   REDDIT_CLIENT_ID=your_id
+   REDDIT_CLIENT_SECRET=your_secret
+   SUPABASE_URL=your_url
+   SUPABASE_ANON_KEY=your_key
+   ```
 4. Run the development server: `npm run dev`
+5. Open [http://localhost:3000](http://localhost:3000)
 
-## Environment Variables
+## Contributing
 
-Required environment variables:
-```
-NEXTAUTH_SECRET
-NEXTAUTH_URL
-GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-GOOGLE_PLACES_API_KEY
-OPENAI_API_KEY
-```
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## License
 
-MIT
+[MIT](LICENSE)

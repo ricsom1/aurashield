@@ -17,42 +17,27 @@ export interface SearchResponse {
 
 export async function fetchWithRetry<T>(
   url: string,
-  options: RequestInit,
-  retries = 3,
-  backoff = 300
-): Promise<ApiResponse<T>> {
+  options: RequestInit = {},
+  retries = 3
+): Promise<{ data?: T; error?: string; status?: number }> {
   try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
-
+    const response = await fetch(url, options);
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(JSON.stringify({
-        error: data.error || 'An error occurred',
-        details: data.details || response.statusText,
-        status: response.status
-      }));
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return fetchWithRetry(url, options, retries - 1);
+      }
+      return { error: data.error || "Request failed", status: response.status };
     }
 
-    return {
-      data,
-      error: data.error,
-      status: response.status,
-      ok: response.ok,
-      statusText: response.statusText
-    };
+    return { data };
   } catch (error) {
     if (retries > 0) {
-      console.log(`Retrying request (${retries} attempts left)...`);
-      await new Promise(resolve => setTimeout(resolve, backoff));
-      return fetchWithRetry(url, options, retries - 1, backoff * 2);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return fetchWithRetry(url, options, retries - 1);
     }
-    throw error;
+    return { error: error instanceof Error ? error.message : "Request failed" };
   }
 } 

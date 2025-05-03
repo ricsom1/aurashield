@@ -22,9 +22,9 @@ export async function POST(req: Request) {
 
     console.log("OpenAI API Key present:", !!process.env.OPENAI_API_KEY);
     
-    const prompt = `Summarize this week's restaurant reviews based on these keywords and sentiments: ${JSON.stringify(
+    const prompt = `Summarize this week's social media mentions based on these keywords and sentiments: ${JSON.stringify(
       keywords
-    )}. Keep it concise and helpful, focusing on actionable insights for the restaurant owner.`;
+    )}. Keep it concise and helpful, focusing on actionable insights for the creator.`;
 
     console.log("Sending request to OpenAI...");
     const completion = await openai.chat.completions.create({
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         {
           role: "system",
           content:
-            "You are a helpful restaurant review analyst. Provide concise, actionable insights based on customer feedback.",
+            "You are a helpful social media analyst. Provide concise, actionable insights based on audience feedback and engagement.",
         },
         { role: "user", content: prompt },
       ],
