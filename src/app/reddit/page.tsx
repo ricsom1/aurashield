@@ -137,7 +137,12 @@ export default function Reddit() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <DashboardHeader />
+        <DashboardHeader stats={{
+          totalMentions: 0,
+          crisisMentions: 0,
+          sentimentTrend: [],
+          recentMentions: [],
+        }} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
@@ -154,7 +159,19 @@ export default function Reddit() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader />
+      <DashboardHeader stats={{
+        totalMentions: mentions.length,
+        crisisMentions: mentions.filter(m => m.is_crisis).length,
+        sentimentTrend: [],
+        recentMentions: mentions.slice(0, 5).map(m => ({
+          id: m.id,
+          text: m.text,
+          source: 'reddit',
+          created_at: m.created_at,
+          sentiment: m.sentiment,
+          is_crisis: m.is_crisis
+        })),
+      }} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Reddit Mentions</h1>
