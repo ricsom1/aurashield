@@ -11,7 +11,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     <ToastProvider>
       <div className="min-h-screen bg-[#0c1b17] text-white flex flex-col overflow-x-hidden">
         {/* Header */}
-        <header className="w-full px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between border-b border-white/10 backdrop-blur-lg z-20 flex-wrap overflow-hidden">
+        <header className="relative w-full px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between border-b border-white/10 backdrop-blur-lg z-20 flex-wrap overflow-hidden">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-green-300">
             <span className="bg-gradient-to-r from-green-400 to-green-700 bg-clip-text text-transparent">AuraShield</span>
           </Link>
