@@ -7,11 +7,16 @@ import { Menu } from 'lucide-react';
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  console.log(mobileOpen);
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-[#0c1b17] text-white flex flex-col overflow-x-hidden">
+      <div className="min-h-screen bg-[#0c1b17] text-white flex flex-col">
+        {/* Debug test div for mobileOpen */}
+        {mobileOpen && (
+          <div className="fixed top-0 left-0 bg-red-500 z-[9999] w-40 h-40">Test</div>
+        )}
         {/* Header */}
-        <header className="relative w-full px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between border-b border-white/10 backdrop-blur-lg z-20 flex-wrap overflow-hidden">
+        <header className="relative w-full px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between border-b border-white/10 backdrop-blur-lg z-20 flex-wrap">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-green-300">
             <span className="bg-gradient-to-r from-green-400 to-green-700 bg-clip-text text-transparent">AuraShield</span>
           </Link>
@@ -33,7 +38,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </nav>
           {/* Mobile Nav Dropdown */}
           {mobileOpen && (
-            <div className="md:hidden absolute top-full left-0 w-full bg-[#0c1b17] border-b border-white/10 shadow-lg z-30 animate-fade-in flex flex-col items-stretch">
+            <div className="md:hidden absolute top-full left-0 w-full bg-black border-b border-white/10 shadow-lg z-50 animate-fade-in flex flex-col items-stretch">
               <Link href="/" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Home</Link>
               <Link href="/features" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Features</Link>
               <Link href="/blog" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Blog</Link>
