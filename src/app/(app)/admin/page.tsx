@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useEffect, useState } from "react";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";

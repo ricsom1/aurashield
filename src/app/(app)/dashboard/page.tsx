@@ -1,8 +1,8 @@
 "use client";
 
+import React from "react";
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase";
-import DashboardHeader from "@/components/DashboardHeader";
 import { useAuth } from "@/components/AuthProvider";
 import SignIn from "@/components/SignIn";
 import {
@@ -232,7 +232,6 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <OnboardingChecklist />
         <div className="grid grid-cols-1 gap-6">
-          <DashboardHeader stats={stats} />
           <TwitterAnalytics stats={twitterStats} />
           <MentionsList mentions={stats?.recentMentions || []} />
         </div>

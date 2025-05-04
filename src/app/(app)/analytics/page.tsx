@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase";
 import DashboardHeader from "@/components/DashboardHeader";
