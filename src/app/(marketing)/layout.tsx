@@ -7,14 +7,9 @@ import { Menu } from 'lucide-react';
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  console.log(mobileOpen);
   return (
     <ToastProvider>
       <div className="min-h-screen bg-[#0c1b17] text-white flex flex-col">
-        {/* Debug test div for mobileOpen */}
-        {mobileOpen && (
-          <div className="fixed top-0 left-0 bg-red-500 z-[9999] w-40 h-40">Test</div>
-        )}
         {/* Header */}
         <header className="relative w-full px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between border-b border-white/10 backdrop-blur-lg z-20 flex-wrap">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-green-300">
@@ -22,11 +17,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </Link>
           {/* Hamburger for mobile */}
           <button
-            className="md:hidden ml-auto p-2 rounded hover:bg-green-900/30 focus:outline-none"
-            onClick={() => setMobileOpen((v) => !v)}
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden p-2 rounded-md bg-neutral-900 hover:bg-neutral-800 transition"
             aria-label="Open menu"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav-dropdown"
           >
-            <Menu className="w-7 h-7 text-green-300" />
+            <Menu className="h-6 w-6 text-green-400" />
           </button>
           {/* Desktop Nav */}
           <nav className="hidden md:flex gap-8 text-lg items-center ml-8 flex-wrap">
@@ -38,12 +35,22 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </nav>
           {/* Mobile Nav Dropdown */}
           {mobileOpen && (
-            <div className="md:hidden absolute top-full left-0 w-full bg-black border-b border-white/10 shadow-lg z-50 animate-fade-in flex flex-col items-stretch">
-              <Link href="/" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Home</Link>
-              <Link href="/features" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Features</Link>
-              <Link href="/blog" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Blog</Link>
-              <Link href="/contact" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Contact</Link>
-              <Link href="/login" className="py-3 px-6 bg-green-600 text-white font-semibold rounded-b-lg hover:bg-green-500" onClick={() => setMobileOpen(false)}>Login</Link>
+            <div
+              id="mobile-nav-dropdown"
+              role="menu"
+              className="absolute top-full left-0 w-full bg-neutral-950 border-t border-neutral-800 shadow-md z-50 transition-all duration-300 ease-in-out"
+            >
+              <nav className="flex flex-col gap-4 p-6 text-white text-lg font-medium">
+                <Link href="/features" className="hover:text-green-400 transition">Features</Link>
+                <Link href="/blog" className="hover:text-green-400 transition">Blog</Link>
+                <Link href="/contact" className="hover:text-green-400 transition">Contact</Link>
+                <Link
+                  href="/app"
+                  className="mt-4 bg-green-600 text-white py-2 px-4 rounded-lg text-center hover:bg-green-500 transition"
+                >
+                  Login
+                </Link>
+              </nav>
             </div>
           )}
         </header>
