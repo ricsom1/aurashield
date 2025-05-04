@@ -41,7 +41,7 @@ export default function FeaturesPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#0c1b17] to-[#1a2a2f] py-16 px-4">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-4xl font-extrabold text-center mb-8 text-green-300">Features</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8">
           {features.map((f, i) => (
             <motion.div
               key={f.title}
@@ -49,9 +49,10 @@ export default function FeaturesPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="w-full sm:max-w-md mx-auto"
             >
-              <Card className="bg-[#162825] border-0 shadow-xl hover:scale-[1.03] transition-transform duration-200">
-                <CardContent className="py-8 px-6 flex flex-col items-center">
+              <Card className="bg-[#111] rounded-xl px-4 py-6 text-center flex flex-col items-center">
+                <CardContent className="flex flex-col items-center">
                   <span className="text-4xl mb-4">{f.icon}</span>
                   <h3 className="text-xl font-semibold mb-2 text-green-200">{f.title}</h3>
                   <p className="text-green-100 text-center">{f.desc}</p>
