@@ -9,19 +9,21 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-[#0c1b17] text-white flex flex-col overflow-x-hidden">
+      <div className="min-h-screen bg-[#0c1b17] text-white flex flex-col">
         {/* Header */}
-        <header className="relative w-full px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between border-b border-white/10 backdrop-blur-lg z-20 flex-wrap overflow-hidden">
+        <header className="relative w-full px-4 sm:px-6 md:px-8 py-3 flex items-center justify-between border-b border-white/10 backdrop-blur-lg z-20 flex-wrap">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-green-300">
             <span className="bg-gradient-to-r from-green-400 to-green-700 bg-clip-text text-transparent">AuraShield</span>
           </Link>
           {/* Hamburger for mobile */}
           <button
-            className="md:hidden ml-auto p-2 rounded hover:bg-green-900/30 focus:outline-none"
-            onClick={() => setMobileOpen((v) => !v)}
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden p-2 rounded-md bg-neutral-900 hover:bg-neutral-800 transition"
             aria-label="Open menu"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav-dropdown"
           >
-            <Menu className="w-7 h-7 text-green-300" />
+            <Menu className="h-6 w-6 text-green-400" />
           </button>
           {/* Desktop Nav */}
           <nav className="hidden md:flex gap-8 text-lg items-center ml-8 flex-wrap">
@@ -33,12 +35,19 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </nav>
           {/* Mobile Nav Dropdown */}
           {mobileOpen && (
-            <div className="md:hidden absolute top-full left-0 w-full bg-[#0c1b17] border-b border-white/10 shadow-lg z-30 animate-fade-in flex flex-col items-stretch">
-              <Link href="/" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Home</Link>
-              <Link href="/features" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Features</Link>
-              <Link href="/blog" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Blog</Link>
-              <Link href="/contact" className="py-3 px-6 border-b border-white/10 hover:bg-green-900/20" onClick={() => setMobileOpen(false)}>Contact</Link>
-              <Link href="/login" className="py-3 px-6 bg-green-600 text-white font-semibold rounded-b-lg hover:bg-green-500" onClick={() => setMobileOpen(false)}>Login</Link>
+            <div
+              id="mobile-nav-dropdown"
+              className="absolute top-full left-0 w-full bg-neutral-950 z-50 p-6 flex flex-col gap-4 text-lg"
+            >
+              <Link href="/features" className="hover:text-green-400 transition">Features</Link>
+              <Link href="/blog" className="hover:text-green-400 transition">Blog</Link>
+              <Link href="/contact" className="hover:text-green-400 transition">Contact</Link>
+              <Link
+                href="/app"
+                className="mt-4 bg-green-600 text-white py-2 px-4 rounded-lg text-center hover:bg-green-500 transition"
+              >
+                Login
+              </Link>
             </div>
           )}
         </header>
